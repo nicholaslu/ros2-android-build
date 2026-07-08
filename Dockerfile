@@ -1,8 +1,8 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 # setup non-root user
 ARG USERNAME=user
-ARG USER_UID=1000
+ARG USER_UID=1001
 ARG USER_GID=$USER_UID
 
 RUN groupadd --gid $USER_GID $USERNAME \
@@ -13,7 +13,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 #--------------------------------------------------------------------------------------------
 
-ENV ANDROID_NDK_VERSION android-ndk-r23b
+ENV ANDROID_NDK_VERSION android-ndk-r28
 ENV ANDROID_TARGET android-24
 ENV ANDROID_ABI arm64-v8a
 ENV ANDROID_TOOLCHAIN_NAME aarch64-linux-android
@@ -23,10 +23,37 @@ ENV CMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake
 ENV TZ=Asia/Tokyo
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+# setup ROS2
+RUN apt-get update && apt-get install -y \
+    curl gnupg lsb-release software-properties-common && \
+    add-apt-repository universe && \
+    ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F'"' '{print $4}') && \
+    curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb" && \
+    dpkg -i /tmp/ros2-apt-source.deb && \
+    rm -f /tmp/ros2-apt-source.deb
+
 RUN apt update
-RUN apt install -y git vim cmake build-essential openjdk-8-jdk
-RUN apt install -y unzip wget gradle python3-pip
-RUN pip3 install -U colcon-common-extensions vcstool lark colcon-ros-gradle
+RUN apt install -y \
+    git \
+    vim \
+    build-essential \
+    openjdk-8-jdk \
+    cmake \
+    unzip \
+    wget \
+    gradle \
+    python3-dev \
+    python3-pip \
+    python3-empy \
+    python3-colcon-common-extensions \
+    python3-vcstool \
+    python3-lark \
+    libeigen3-dev \
+    libbullet-dev
+
+# RUN apt install -y git vim cmake build-essential openjdk-8-jdk
+# RUN apt install -y unzip wget gradle python3-pip
+# RUN pip3 install -U colcon-common-extensions vcstool lark colcon-ros-gradle
 
 RUN wget -O /tmp/android-ndk.zip https://dl.google.com/android/repository/${ANDROID_NDK_VERSION}-linux.zip && mkdir -p /opt/android/ && cd /opt/android/ && unzip -q /tmp/android-ndk.zip && rm /tmp/android-ndk.zip
 

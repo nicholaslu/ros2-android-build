@@ -34,11 +34,11 @@ repositories:
   eProsima/Fast-DDS:
     type: git
     url: https://github.com/eProsima/Fast-DDS.git
-    version: 2.9.0
+    version: v2.9.0
   eProsima/foonathan_memory_vendor:
     type: git
     url: https://github.com/eProsima/foonathan_memory_vendor.git
-    version: v1.3.0
+    version: master
   osrf/osrf_pycommon:
     type: git
     url: https://github.com/osrf/osrf_pycommon.git
@@ -47,6 +47,10 @@ repositories:
     type: git
     url: https://github.com/osrf/osrf_testing_tools_cpp.git
     version: master
+  ros-misc-utilities/ffmpeg_image_transport_msgs:
+    type: git
+    url: https://github.com/ros-misc-utilities/ffmpeg_image_transport_msgs.git
+    version: humble
   ros-tooling/libstatistics_collector:
     type: git
     url: https://github.com/ros-tooling/libstatistics_collector.git
@@ -63,10 +67,6 @@ repositories:
     type: git
     url: https://github.com/ros2/common_interfaces.git
     version: humble
-  ros2/tf2_msgs:
-    type: git
-    url: https://github.com/YasuChiba/tf2_msgs.git
-    version: galactic
   ros2/example_interfaces:
     type: git
     url: https://github.com/ros2/example_interfaces.git
@@ -175,3 +175,63 @@ repositories:
     type: git
     url: https://github.com/ros2-java/ros2_android_examples.git
     version: main
+  ros2/geometry2:
+    type: git
+    url: https://github.com/ros2/geometry2.git
+    version: humble
+  ros2/console_bridge_vendor:
+    type: git
+    url: https://github.com/ros2/console_bridge_vendor.git
+    version: humble
+  ros2/eigen3_cmake_module:
+    type: git
+    url: https://github.com/ros2/eigen3_cmake_module.git
+    version: humble
+  ros2/message_filters:
+    type: git
+    url: https://github.com/ros2/message_filters.git
+    version: humble
+  ros2/rclcpp:
+    type: git
+    url: https://github.com/ros2/rclcpp.git
+    version: humble
+  ros/class_loader:
+    type: git
+    url: https://github.com/ros/class_loader.git
+    version: humble
+  ros2/orocos_kdl_vendor:
+    type: git
+    url: https://github.com/ros2/orocos_kdl_vendor.git
+    version: humble
+  ros/kdl_parser:
+    type: git
+    url: https://github.com/ros/kdl_parser.git
+    version: humble
+  ros/robot-state-publisher:
+    type: git
+    url: https://github.com/ros/robot_state_publisher.git
+    version: humble
+  ros2/urdf:
+    type: git
+    url: https://github.com/ros2/urdf.git
+    version: humble
+  ros/urdfdom:
+    type: git
+    url: https://github.com/ros/urdfdom.git
+    version: humble
+  ros/urdfdom_headers:
+    type: git
+    url: https://github.com/ros/urdfdom_headers.git
+    version: humble
+  ros2/tinyxml_vendor:
+    type: git
+    url: https://github.com/ros2/tinyxml_vendor.git
+    version: humble
+  ros2/tinyxml2_vendor:
+    type: git
+    url: https://github.com/ros2/tinyxml2_vendor.git
+    version: humble
+  ros/pluginlib:
+    type: git
+    url: https://github.com/ros/pluginlib.git
+    version: humble

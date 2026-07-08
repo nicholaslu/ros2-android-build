@@ -71,6 +71,40 @@ def output(workspacePath: pathlib.Path, soOutPath: pathlib.Path, jarOutPath: pat
     distFilePath = soOutPath.joinpath(filepath.name)
     shutil.copyfile(filepath, distFilePath)
 
+def patch(workspacePath: pathlib.Path, repoPath: pathlib.Path, patchPath: pathlib.Path):
+    projectPath = pathlib.Path(__file__).resolve().parent
+    repoPath = workspacePath.joinpath(*repoPath)
+    patchPath = projectPath.joinpath(*patchPath)
+
+    if not repoPath.exists():
+        print(f"Patch skipped: repository not found: {repoPath}")
+        return
+
+    if not patchPath.exists():
+        print(f"Patch skipped: patch file not found: {patchPath}")
+        return
+
+    print(f"Applying patch: {patchPath}")
+
+    # skip if the patch is already applied
+    reverse_check = subprocess.run(
+        ["git", "-C", str(repoPath), "apply", "--reverse", "--check", str(patchPath)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    if reverse_check.returncode == 0:
+        print("Patch already applied, skipping.")
+        return
+
+    apply_result = subprocess.run(
+        ["git", "-C", str(repoPath), "apply", str(patchPath)]
+    )
+    if apply_result.returncode != 0:
+        raise RuntimeError(f"Failed to apply patch: {patchPath}")
+
+    print("Patch applied successfully.")
+
+
 def main():
     args = getArgs()
 
@@ -99,10 +133,16 @@ def main():
     if args.repoFile is not None:
         # TODO: need to implement
         raise NotImplementedError()
-
+    
+    patch(workspacePath, ["src", "ros2", "orocos_kdl_vendor"], ["patches", "orocos_kdl_vendor.patch"])
+    patch(workspacePath, ["src", "ros2", "tinyxml_vendor"], ["patches", "tinyxml_vendor.patch"])
+    patch(workspacePath, ["src", "ros2", "tinyxml2_vendor"], ["patches", "tinyxml2_vendor.patch"])
+    patch(workspacePath, ["src", "ros2", "geometry2"], ["patches", "geometry2.patch"])
+    patch(workspacePath, ["src", "ros2", "urdf"], ["patches", "urdf.patch"])
+    patch(workspacePath, ["src", "ros2-java", "ros2_java"], ["patches", "ros2_java.patch"])
     build(workspacePath)
     output(workspacePath, soOutPath, jarOutPath)
-    
+
 
 if __name__ == '__main__':
     main()

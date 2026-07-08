@@ -1,0 +1,39 @@
+diff --git a/urdf/src/model.cpp b/urdf/src/model.cpp
+index a99b2ee..8200ff3 100644
+--- a/urdf/src/model.cpp
++++ b/urdf/src/model.cpp
+@@ -44,6 +44,7 @@
+ #include <utility>
+ #include <vector>
+ 
++#include "urdf_parser/urdf_parser.h"
+ #include "urdf_parser_plugin/parser.h"
+ #include "pluginlib/class_loader.hpp"
+ 
+@@ -138,6 +139,26 @@ bool Model::initString(const std::string & data)
+ {
+   urdf::ModelInterfaceSharedPtr model;
+ 
++#ifdef __ANDROID__
++  // pluginlib resolves parser plugins through the ament resource index and
++  // plugin-description XML files on disk, then dlopens the plugin library by
++  // that path — none of which exists inside an Android APK, so plugin
++  // discovery always comes up empty. Parse directly with the built-in URDF
++  // XML parser instead.
++  model = urdf::parseURDF(data);
++  if (!model) {
++    fprintf(stderr, "Failed to parse robot description.\n");
++    return false;
++  }
++
++  this->links_ = model->links_;
++  this->joints_ = model->joints_;
++  this->materials_ = model->materials_;
++  this->name_ = model->name_;
++  this->root_link_ = model->root_link_;
++  return true;
++#endif
++
+   size_t best_score = std::numeric_limits<size_t>::max();
+   auto best_plugin = pluginlib::UniquePtr<urdf::URDFParser>{nullptr};
+   std::string best_plugin_name;
