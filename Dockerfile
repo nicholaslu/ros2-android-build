@@ -75,3 +75,37 @@ RUN chmod +x /home/${USERNAME}/build-android.sh
 
 USER $USERNAME
 WORKDIR /home/$USERNAME/
+
+# rmw_zenoh's zenoh_cpp_vendor package builds zenoh-c, a Rust crate, via cargo.
+# The exact zenoh-c commit it vendors (picked by its own CMake based on the
+# detected cargo version) ships its own rust-toolchain.toml pinning some other
+# Rust version, which would need its own aarch64-linux-android target added on
+# every bump. Sidestep that entirely by forcing every cargo invocation in this
+# image to always use our `stable` toolchain regardless of any rust-toolchain
+# file a vendored crate ships.
+ENV RUSTUP_HOME=/home/${USERNAME}/.rustup
+ENV CARGO_HOME=/home/${USERNAME}/.cargo
+ENV PATH=${CARGO_HOME}/bin:${PATH}
+ENV RUSTUP_TOOLCHAIN=stable
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile minimal \
+    && rustup target add aarch64-linux-android
+
+# crates with a C component (e.g. ring, used by rustls) build via the `cc` crate,
+# which doesn't read cargo's own linker config below -- it needs its own env vars.
+ENV CC_aarch64_linux_android=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
+ENV CXX_aarch64_linux_android=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++
+ENV AR_aarch64_linux_android=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar
+ENV CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang
+
+# point cargo at the NDK's clang wrapper for the ABI/API level configured above.
+# rustflags forces a DT_SONAME onto any cdylib built for this target (e.g.
+# zenoh-c's libzenohc.so) -- without it, rustc emits no soname, so a consumer
+# linked against it (rmw_zenoh_cpp) records the absolute build-machine install
+# path in its own DT_NEEDED instead of a bare filename, which only resolves on
+# the machine that built it and fails to dlopen anywhere else (e.g. Android).
+RUN mkdir -p ${CARGO_HOME} \
+    && printf '[target.aarch64-linux-android]\nlinker = "%s"\nar = "%s"\nrustflags = ["-C", "link-arg=-Wl,-soname,libzenohc.so"]\n' \
+        "${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/${ANDROID_TOOLCHAIN_NAME}${ANDROID_TARGET#android-}-clang" \
+        "${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar" \
+        > ${CARGO_HOME}/config.toml

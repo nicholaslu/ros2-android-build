@@ -140,6 +140,7 @@ def main():
     patch(workspacePath, ["src", "ros2", "geometry2"], ["patches", "geometry2.patch"])
     patch(workspacePath, ["src", "ros2", "urdf"], ["patches", "urdf.patch"])
     patch(workspacePath, ["src", "ros2-java", "ros2_java"], ["patches", "ros2_java.patch"])
+    patch(workspacePath, ["src", "ros2", "rmw_zenoh"], ["patches", "rmw_zenoh.patch"])
     build(workspacePath)
     output(workspacePath, soOutPath, jarOutPath)
 
