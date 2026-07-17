@@ -1,0 +1,47 @@
+diff --git a/src/cpp/CMakeLists.txt b/src/cpp/CMakeLists.txt
+index fbda6027e..18f2e09c6 100644
+--- a/src/cpp/CMakeLists.txt
++++ b/src/cpp/CMakeLists.txt
+@@ -393,11 +393,15 @@ if(NOT CMAKE_ATOMIC_LIB)
+     set(CMAKE_ATOMIC_LIB)
+ endif()
+ 
+-try_run(SM_RUN_RESULT SM_COMPILE_RESULT
+-        "${CMAKE_CURRENT_BINARY_DIR}/shmtest"
+-        "${CMAKE_SOURCE_DIR}/cmake/modules/check_shared_mutex_priority.cpp"
+-        LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_ATOMIC_LIB}
+-        RUN_OUTPUT_VARIABLE SM_RUN_OUTPUT)
++# try_run cannot execute the test binary when cross-compiling; leaving
++# SM_RUN_OUTPUT unset falls through to the third party shared_mutex below
++if(NOT CMAKE_CROSSCOMPILING)
++    try_run(SM_RUN_RESULT SM_COMPILE_RESULT
++            "${CMAKE_CURRENT_BINARY_DIR}/shmtest"
++            "${CMAKE_SOURCE_DIR}/cmake/modules/check_shared_mutex_priority.cpp"
++            LINK_LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_ATOMIC_LIB}
++            RUN_OUTPUT_VARIABLE SM_RUN_OUTPUT)
++endif()
+ 
+ if(SM_COMPILE_RESULT AND NOT SM_RUN_RESULT)
+     string(STRIP ${SM_RUN_OUTPUT} SM_RUN_OUTPUT)
+diff --git a/thirdparty/filewatch/FileWatch.hpp b/thirdparty/filewatch/FileWatch.hpp
+index 1ed0c669d..5105ddae1 100644
+--- a/thirdparty/filewatch/FileWatch.hpp
++++ b/thirdparty/filewatch/FileWatch.hpp
+@@ -508,7 +508,7 @@ namespace filewatch {
+ 
+                 std::chrono::time_point<std::chrono::system_clock> current_time;
+                 current_time += std::chrono::seconds(result.st_mtim.tv_sec);
+-                current_time += std::chrono::nanoseconds(result.st_mtim.tv_nsec);
++                current_time += std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::nanoseconds(result.st_mtim.tv_nsec));
+ 
+                 unsigned long current_size = result.st_size;
+ 
+@@ -605,7 +605,7 @@ namespace filewatch {
+             stat(_path.c_str(), &result);
+ 
+             last_write_time_ += std::chrono::seconds(result.st_mtim.tv_sec);
+-            last_write_time_ += std::chrono::nanoseconds(result.st_mtim.tv_nsec);
++            last_write_time_ += std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::nanoseconds(result.st_mtim.tv_nsec));
+ 
+             // Initialize filesize
+             last_size_ = result.st_size;
