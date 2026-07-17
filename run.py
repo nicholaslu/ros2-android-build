@@ -35,6 +35,10 @@ def getArgs():
     return(args)
 
 
+# -t allocates a TTY, which does not exist on CI runners
+DOCKER_RUN = 'docker run -it' if sys.stdout.isatty() else 'docker run -i'
+
+
 def setupRos2Java(workspacePath: pathlib.Path):
     repoFilePath = pathlib.Path(workspacePath, "ros2_java_android.repos")
     srcDirPath = pathlib.Path(workspacePath, "src")
@@ -43,14 +47,14 @@ def setupRos2Java(workspacePath: pathlib.Path):
     if not os.path.exists(srcDirPath):
         os.makedirs(srcDirPath)
         print('start cloning ros2java related packages')
-        command = f'docker run -it --rm --net=host -v {workspacePath}:/home/user/workspace ros2java-android-build vcs import --input /home/user/workspace/ros2_java_android.repos /home/user/workspace/src'
-        subprocess.run(command, shell=True)
+        command = f'{DOCKER_RUN} --rm --net=host -v {workspacePath}:/home/user/workspace ros2java-android-build vcs import --input /home/user/workspace/ros2_java_android.repos /home/user/workspace/src'
+        subprocess.run(command, shell=True, check=True)
 
 
 def build(workspacePath: pathlib.Path):
     print('start building packages')
-    command = f'docker run -it --rm --net=host -v {workspacePath}:/home/user/workspace ros2java-android-build /home/user/build-android.sh'
-    subprocess.run(command, shell=True)
+    command = f'{DOCKER_RUN} --rm --net=host -v {workspacePath}:/home/user/workspace ros2java-android-build /home/user/build-android.sh'
+    subprocess.run(command, shell=True, check=True)
 
 def output(workspacePath: pathlib.Path, soOutPath: pathlib.Path, jarOutPath: pathlib.Path):
     soFiles = [f for f in glob.glob(str(workspacePath) + "/install/**/*.so", recursive=True)]
