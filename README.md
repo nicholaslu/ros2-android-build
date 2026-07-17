@@ -2,6 +2,7 @@
 
 Build [rcljava](https://github.com/ros2-java/ros2_java) for Android.  
 
+Package versions are pinned to an official ROS 2 Humble patch release, currently release-humble-20260220.
 
 ## Environment
 Modify [Dockerfile](./Dockerfile) to change environment.
