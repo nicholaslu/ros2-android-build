@@ -1,0 +1,20 @@
+diff --git a/src/ddsrt/src/threads/posix/threads.c b/src/ddsrt/src/threads/posix/threads.c
+index 0191ec46..a25da6d2 100644
+--- a/src/ddsrt/src/threads/posix/threads.c
++++ b/src/ddsrt/src/threads/posix/threads.c
+@@ -299,11 +299,15 @@ ddsrt_thread_create (
+       DDS_ERROR("ddsrt_thread_create(%s): pthread_attr_setschedparam(priority = %d) failed with error %d\n", name, tattr.schedPriority, result);
+       goto err;
+     }
++#if !defined(__ANDROID__)
++    /* Bionic does not provide pthread_attr_setinheritsched; scheduling
++       attributes set on the pthread_attr_t are always used explicitly. */
+     if ((result = pthread_attr_setinheritsched (&attr, PTHREAD_EXPLICIT_SCHED)) != 0)
+     {
+       DDS_ERROR("ddsrt_thread_create(%s): pthread_attr_setinheritsched(EXPLICIT) failed with error %d\n", name, result);
+       goto err;
+     }
++#endif
+   }
+ 
+   /* Construct context structure & start thread */

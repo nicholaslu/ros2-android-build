@@ -9,7 +9,7 @@ export PYTHON3_INCLUDE_DIR="$( ${PYTHON3_EXEC} -c 'from distutils import sysconf
 export CMAKE_PREFIX_PATH="/usr/share/eigen3/cmake:${PWD}/install:${CMAKE_PREFIX_PATH:-}"
 
 colcon build \
-    --packages-ignore cyclonedds rcl_logging_log4cxx rcl_logging_spdlog rosidl_generator_py rclandroid ros2_talker_android ros2_listener_android performance_test_fixture osrf_testing_tools_cpp google_benchmark_vendor launch_testing_ament_cmake \
+    --packages-ignore rcl_logging_log4cxx rcl_logging_spdlog rosidl_generator_py rclandroid ros2_talker_android ros2_listener_android performance_test_fixture osrf_testing_tools_cpp google_benchmark_vendor launch_testing_ament_cmake \
     tf2_kdl tf2_eigen tf2_eigen_kdl tf2_py python_orocos_kdl_vendor tf2_bullet \
     zenoh_security_tools test_rmw_zenoh_cpp\
     --cmake-args \

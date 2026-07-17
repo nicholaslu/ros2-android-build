@@ -141,6 +141,7 @@ def main():
     patch(workspacePath, ["src", "ros2", "urdf"], ["patches", "urdf.patch"])
     patch(workspacePath, ["src", "ros2-java", "ros2_java"], ["patches", "ros2_java.patch"])
     patch(workspacePath, ["src", "ros2", "rmw_zenoh"], ["patches", "rmw_zenoh.patch"])
+    patch(workspacePath, ["src", "eclipse-cyclonedds", "cyclonedds"], ["patches", "cyclonedds.patch"])
     build(workspacePath)
     output(workspacePath, soOutPath, jarOutPath)
 

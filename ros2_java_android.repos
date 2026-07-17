@@ -23,10 +23,10 @@ repositories:
     type: git
     url: https://github.com/ament/googletest.git
     version: humble
-  ament/uncrustify_vendor:
+  eclipse-cyclonedds/cyclonedds:
     type: git
-    url: https://github.com/ament/uncrustify_vendor.git
-    version: galactic
+    url: https://github.com/eclipse-cyclonedds/cyclonedds.git
+    version: releases/0.10.x
   eProsima/Fast-CDR:
     type: git
     url: https://github.com/eProsima/Fast-CDR.git
@@ -46,7 +46,7 @@ repositories:
   osrf/osrf_testing_tools_cpp:
     type: git
     url: https://github.com/osrf/osrf_testing_tools_cpp.git
-    version: master
+    version: humble
   ros-misc-utilities/ffmpeg_image_transport_msgs:
     type: git
     url: https://github.com/ros-misc-utilities/ffmpeg_image_transport_msgs.git
@@ -55,9 +55,9 @@ repositories:
     type: git
     url: https://github.com/ros-tooling/libstatistics_collector.git
     version: humble
-  ros-tracing/ros2_tracing:
+  ros2/ros2_tracing:
     type: git
-    url: https://gitlab.com/ros-tracing/ros2_tracing.git
+    url: https://github.com/ros2/ros2_tracing.git
     version: humble
   ros2/ament_cmake_ros:
     type: git
@@ -82,7 +82,7 @@ repositories:
   ros2/performance_test_fixture:
     type: git
     url: https://github.com/ros2/performance_test_fixture.git
-    version: main
+    version: humble
   ros2/python_cmake_module:
     type: git
     url: https://github.com/ros2/python_cmake_module.git
@@ -110,6 +110,10 @@ repositories:
   ros2/rmw:
     type: git
     url: https://github.com/ros2/rmw.git
+    version: humble
+  ros2/rmw_cyclonedds:
+    type: git
+    url: https://github.com/ros2/rmw_cyclonedds.git
     version: humble
   ros2/rmw_dds_common:
     type: git
