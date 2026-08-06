@@ -2,7 +2,8 @@ name: Build ROS 2 Android libraries
 
 on:
   push:
-    branches: [main]
+    # One branch per ROS 2 distro; this branch builds Jazzy.
+    branches: [jazzy]
     # Release tags mirror ros2/ros2's scheme, with a trailing build number for
     # Android-side respins of the same upstream release:
     #   release-humble-20260220-1
@@ -99,7 +100,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          tags: ros2java-android-build:latest
+          tags: ros2java-android-build:jazzy
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -4,14 +4,17 @@ set -eu
 cd /home/user/workspace
 
 export PYTHON3_EXEC="$( which python3 )"
-export PYTHON3_LIBRARY="$( ${PYTHON3_EXEC} -c 'import os.path; from distutils import sysconfig; print(os.path.realpath(os.path.join(sysconfig.get_config_var("LIBPL"), sysconfig.get_config_var("LDLIBRARY"))))' )"
-export PYTHON3_INCLUDE_DIR="$( ${PYTHON3_EXEC} -c 'from distutils import sysconfig; print(sysconfig.get_config_var("INCLUDEPY"))' )"
+# stdlib sysconfig, not distutils.sysconfig -- distutils was removed in Python 3.12,
+# which is the default on Ubuntu 24.04. Both return identical values for these keys.
+export PYTHON3_LIBRARY="$( ${PYTHON3_EXEC} -c 'import os.path, sysconfig; print(os.path.realpath(os.path.join(sysconfig.get_config_var("LIBPL"), sysconfig.get_config_var("LDLIBRARY"))))' )"
+export PYTHON3_INCLUDE_DIR="$( ${PYTHON3_EXEC} -c 'import sysconfig; print(sysconfig.get_config_var("INCLUDEPY"))' )"
 export CMAKE_PREFIX_PATH="/usr/share/eigen3/cmake:${PWD}/install:${CMAKE_PREFIX_PATH:-}"
 
 colcon build \
     --packages-ignore rcl_logging_log4cxx rcl_logging_spdlog rosidl_generator_py rclandroid ros2_talker_android ros2_listener_android performance_test_fixture osrf_testing_tools_cpp google_benchmark_vendor launch_testing_ament_cmake \
     tf2_kdl tf2_eigen tf2_eigen_kdl tf2_py python_orocos_kdl_vendor tf2_bullet \
-    zenoh_security_tools test_rmw_zenoh_cpp\
+    zenoh_security_tools test_rmw_zenoh_cpp \
+    lttngpy \
     --cmake-args \
     -DPython3_EXECUTABLE=${PYTHON3_EXEC} \
     -DPython3_LIBRARY=${PYTHON3_LIBRARY} \

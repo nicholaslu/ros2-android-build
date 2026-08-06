@@ -1,4 +1,6 @@
-FROM ubuntu:22.04
+# ROS 2 Jazzy targets Ubuntu 24.04. Note this brings Python 3.12, which no longer
+# ships distutils -- see the sysconfig note in build-android.sh.
+FROM ubuntu:24.04
 
 # setup non-root user
 ARG USERNAME=user

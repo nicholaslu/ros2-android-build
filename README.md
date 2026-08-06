@@ -2,7 +2,14 @@
 
 Build [rcljava](https://github.com/ros2-java/ros2_java) for Android.  
 
-Package versions are pinned to an official ROS 2 Humble patch release. The exact
+**This is the `jazzy` branch.** The repository carries one branch per ROS 2 distro:
+
+| Branch | Distro | Upstream EOL |
+|---|---|---|
+| [`main`](../../tree/main) | Humble Hawksbill | May 2027 |
+| `jazzy` | Jazzy Jalisco | May 2029 |
+
+Package versions are pinned to an official ROS 2 Jazzy patch release. The exact
 release is recorded in the `# ros2-release:` line at the top of
 [`ros2_java_android.repos`](./ros2_java_android.repos), which is the single source
 of truth for the pin.
@@ -28,19 +35,20 @@ Modify [Dockerfile](./Dockerfile) to change environment.
 
 Modify [repo](./ros2_java_android.repos) to change ROS2 version.
 
-Currently ROS2 Humble is selectd for the building.
+Currently ROS2 Jazzy is selected for the building. To build a different distro,
+check out that distro's branch.
 
 ## How to build
 
 ### 1. Clone repository
 ```
-git clone https://github.com/nicholaslu/ros2-android-build
+git clone -b jazzy https://github.com/nicholaslu/ros2-android-build
 cd ros2-android-build/
 ```
 
 ### 2. Build docker image
 ```
-docker build -t ros2java-android-build ./
+docker build -t ros2java-android-build:jazzy ./
 ```
 
 ### 3. Build
@@ -58,21 +66,22 @@ Releases are built by CI from a tag. The tag matches the `ros2/ros2` release
 being built:
 
 ```
-release-humble-20260220     # Android build of Humble Patch Release 14
+release-jazzy-20260618      # Android build of Jazzy Patch Release 8
 ```
 
 If the same upstream release has to be rebuilt after an Android-side fix, add a
 build number starting at `-2`:
 
 ```
-release-humble-20260220-2   # same upstream packages, patched and rebuilt
+release-jazzy-20260618-2    # same upstream packages, patched and rebuilt
 ```
 
 The `<distro>-<YYYYMMDD>` part must match the `# ros2-release:` pin in
-`ros2_java_android.repos`; CI fails the release if it does not. The release title
+`ros2_java_android.repos`; CI fails the release if it does not. Tag the branch
+whose distro you are releasing. The release title
 and notes are generated automatically, reusing upstream's own release name.
 
 ```
-git tag release-humble-20260220-1
-git push origin release-humble-20260220-1
+git tag release-jazzy-20260618
+git push origin release-jazzy-20260618
 ```

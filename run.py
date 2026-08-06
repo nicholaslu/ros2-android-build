@@ -38,6 +38,13 @@ def getArgs():
 # -t allocates a TTY, which does not exist on CI runners
 DOCKER_RUN = 'docker run -it' if sys.stdout.isatty() else 'docker run -i'
 
+# One branch per ROS 2 distro. Both the image tag and the workspace directory are
+# namespaced by distro, because tmp/ and the image tag would otherwise be shared
+# across branches -- and setupRos2Java() skips the import when src/ already exists,
+# so a branch switch would silently build the other distro's sources.
+DISTRO = 'jazzy'
+IMAGE = f'ros2java-android-build:{DISTRO}'
+
 
 def setupRos2Java(workspacePath: pathlib.Path):
     repoFilePath = pathlib.Path(workspacePath, "ros2_java_android.repos")
@@ -47,13 +54,13 @@ def setupRos2Java(workspacePath: pathlib.Path):
     if not os.path.exists(srcDirPath):
         os.makedirs(srcDirPath)
         print('start cloning ros2java related packages')
-        command = f'{DOCKER_RUN} --rm --net=host -v {workspacePath}:/home/user/workspace ros2java-android-build vcs import --input /home/user/workspace/ros2_java_android.repos /home/user/workspace/src'
+        command = f'{DOCKER_RUN} --rm --net=host -v {workspacePath}:/home/user/workspace {IMAGE} vcs import --input /home/user/workspace/ros2_java_android.repos /home/user/workspace/src'
         subprocess.run(command, shell=True, check=True)
 
 
 def build(workspacePath: pathlib.Path):
     print('start building packages')
-    command = f'{DOCKER_RUN} --rm --net=host -v {workspacePath}:/home/user/workspace ros2java-android-build /home/user/build-android.sh'
+    command = f'{DOCKER_RUN} --rm --net=host -v {workspacePath}:/home/user/workspace {IMAGE} /home/user/build-android.sh'
     subprocess.run(command, shell=True, check=True)
 
 def output(workspacePath: pathlib.Path, soOutPath: pathlib.Path, jarOutPath: pathlib.Path):
@@ -112,7 +119,7 @@ def patch(workspacePath: pathlib.Path, repoPath: pathlib.Path, patchPath: pathli
 def main():
     args = getArgs()
 
-    workspacePath = pathlib.Path(pathlib.Path(__file__).resolve().parent, "tmp")
+    workspacePath = pathlib.Path(pathlib.Path(__file__).resolve().parent, "tmp", DISTRO)
     workspaceAdditionalSrcDirPath = pathlib.Path(workspacePath, "additional-src")
     soOutPath = pathlib.Path(args.soOutDir).resolve()
     jarOutPath = pathlib.Path(args.jarOutDir).resolve()
@@ -138,8 +145,8 @@ def main():
         # TODO: need to implement
         raise NotImplementedError()
     
+    # tinyxml_vendor: package was dropped from ROS 2 after Humble.
     patch(workspacePath, ["src", "ros2", "orocos_kdl_vendor"], ["patches", "orocos_kdl_vendor.patch"])
-    patch(workspacePath, ["src", "ros2", "tinyxml_vendor"], ["patches", "tinyxml_vendor.patch"])
     patch(workspacePath, ["src", "ros2", "tinyxml2_vendor"], ["patches", "tinyxml2_vendor.patch"])
     patch(workspacePath, ["src", "ros2", "geometry2"], ["patches", "geometry2.patch"])
     patch(workspacePath, ["src", "ros2", "urdf"], ["patches", "urdf.patch"])

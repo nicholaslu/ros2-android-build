@@ -1,8 +1,19 @@
 diff --git a/rcljava/CMakeLists.txt b/rcljava/CMakeLists.txt
-index adf0512..c56f830 100644
+index adf0512..c4258b2 100644
 --- a/rcljava/CMakeLists.txt
 +++ b/rcljava/CMakeLists.txt
-@@ -41,7 +41,6 @@ include_directories(include)
+@@ -12,6 +12,10 @@ find_package(rcl_interfaces REQUIRED)
+ find_package(rcljava_common REQUIRED)
+ find_package(rmw REQUIRED)
+ find_package(rmw_implementation_cmake REQUIRED)
++# Provides string_camel_case_to_lower_case_underscore(), used below. On Humble this
++# arrived transitively via the interface packages; on Jazzy those depend on
++# rosidl_core_* instead, so rosidl_cmake's extras no longer get included here.
++find_package(rosidl_cmake REQUIRED)
+ 
+ include(CrossCompilingExtra)
+ 
+@@ -41,7 +45,6 @@ include_directories(include)
  
  function(set_properties _target_name _build_type)
    set_target_properties(${_target_name} PROPERTIES
@@ -10,7 +21,7 @@ index adf0512..c56f830 100644
      LIBRARY_OUTPUT_DIRECTORY${_build_type} "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}"
      RUNTIME_OUTPUT_DIRECTORY${_build_type} "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}"
    )
-@@ -93,7 +92,8 @@ foreach(_jni_source ${${PROJECT_NAME}_jni_sources})
+@@ -93,7 +96,8 @@ foreach(_jni_source ${${PROJECT_NAME}_jni_sources})
      set(_jni_prefix "lib")
    endif()
    set_target_properties(${_target_name} PROPERTIES
@@ -20,6 +31,44 @@ index adf0512..c56f830 100644
    )
  
    set_properties("${_target_name}" "")
+diff --git a/rcljava/package.xml b/rcljava/package.xml
+index 0ca7574..869faf2 100644
+--- a/rcljava/package.xml
++++ b/rcljava/package.xml
+@@ -11,6 +11,7 @@
+   <buildtool_depend>ament_cmake_export_jars</buildtool_depend>
+   <buildtool_depend>ament_cmake_export_jni_libraries</buildtool_depend>
+   <buildtool_depend>rcljava_common</buildtool_depend>
++  <buildtool_depend>rosidl_cmake</buildtool_depend>
+ 
+   <build_depend>builtin_interfaces</build_depend>
+   <build_depend>rcl_interfaces</build_depend>
+diff --git a/rcljava/src/main/cpp/org_ros2_rcljava_executors_BaseExecutor.cpp b/rcljava/src/main/cpp/org_ros2_rcljava_executors_BaseExecutor.cpp
+index 287a175..33c0607 100644
+--- a/rcljava/src/main/cpp/org_ros2_rcljava_executors_BaseExecutor.cpp
++++ b/rcljava/src/main/cpp/org_ros2_rcljava_executors_BaseExecutor.cpp
+@@ -52,7 +52,9 @@ convert_rmw_request_id_to_java(JNIEnv * env, rmw_request_id_t * request_id)
+   assert(jsequence_number_field_id != nullptr);
+   assert(jwriter_guid_field_id != nullptr);
+ 
+-  int8_t * writer_guid = request_id->writer_guid;
++  // rmw_request_id_t::writer_guid is uint8_t[] as of Jazzy (rmw 7.x); it was
++  // int8_t[] in Humble.
++  uint8_t * writer_guid = request_id->writer_guid;
+   int64_t sequence_number = request_id->sequence_number;
+ 
+   env->SetLongField(jrequest_id, jsequence_number_field_id, sequence_number);
+@@ -82,7 +84,9 @@ convert_rmw_request_id_from_java(JNIEnv * env, jobject jrequest_id)
+ 
+   rmw_request_id_t * request_id = static_cast<rmw_request_id_t *>(malloc(sizeof(rmw_request_id_t)));
+ 
+-  int8_t * writer_guid = request_id->writer_guid;
++  // rmw_request_id_t::writer_guid is uint8_t[] as of Jazzy (rmw 7.x); it was
++  // int8_t[] in Humble.
++  uint8_t * writer_guid = request_id->writer_guid;
+   request_id->sequence_number = env->GetLongField(jrequest_id, jsequence_number_field_id);
+ 
+   jsize writer_guid_len = 16;  // See rmw/rmw/include/rmw/types.h
 diff --git a/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java b/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java
 index 58661a7..b5e0f11 100644
 --- a/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java

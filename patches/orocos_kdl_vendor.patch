@@ -1,20 +1,30 @@
 diff --git a/orocos_kdl_vendor/CMakeLists.txt b/orocos_kdl_vendor/CMakeLists.txt
-index 655e562..58181a6 100644
+index ae3739a..3b50a45 100644
 --- a/orocos_kdl_vendor/CMakeLists.txt
 +++ b/orocos_kdl_vendor/CMakeLists.txt
-@@ -49,6 +49,15 @@ macro(build_orocos_kdl)
-   list(APPEND extra_cmake_args "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")
-   list(APPEND extra_cmake_args "-DENABLE_TESTS=OFF")
-   list(APPEND extra_cmake_args "-DENABLE_EXAMPLES=OFF")
-+  if(DEFINED EIGEN3_INCLUDE_DIR)
-+    list(APPEND extra_cmake_args "-DEIGEN3_INCLUDE_DIR=${EIGEN3_INCLUDE_DIR}")
-+  endif()
-+  if(DEFINED Eigen3_DIR)
-+    list(APPEND extra_cmake_args "-DEigen3_DIR=${Eigen3_DIR}")
-+  endif()
-+  if(DEFINED CMAKE_PREFIX_PATH)
-+    list(APPEND extra_cmake_args "-DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}")
-+  endif()
+@@ -13,6 +13,17 @@ if(NOT CMAKE_CXX_STANDARD)
+   set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ endif()
  
-   include(ExternalProject)
++# ament_vendor() forwards CMAKE_TOOLCHAIN_FILE and the ANDROID_* variables to the
++# sub-build, but not Eigen's location, so the cross-compiled orocos_kdl fails with
++# EIGEN3_INCLUDE_DIR-NOTFOUND. Forward it explicitly when the outer build set it.
++set(_vendor_eigen_args)
++if(DEFINED EIGEN3_INCLUDE_DIR)
++  list(APPEND _vendor_eigen_args "-DEIGEN3_INCLUDE_DIR=${EIGEN3_INCLUDE_DIR}")
++endif()
++if(DEFINED Eigen3_DIR)
++  list(APPEND _vendor_eigen_args "-DEigen3_DIR=${Eigen3_DIR}")
++endif()
++
+ ament_vendor(orocos_kdl_vendor
+   SATISFIED ${orocos_kdl_FOUND}
+   VCS_URL https://github.com/orocos/orocos_kinematics_dynamics.git
+@@ -22,6 +33,7 @@ ament_vendor(orocos_kdl_vendor
+   CMAKE_ARGS
+     -DENABLE_TESTS:BOOL=OFF
+     -DENABLE_EXAMPLES:BOOL=OFF
++    ${_vendor_eigen_args}
+   PATCHES patches
+ )
  
