@@ -1,3 +1,10 @@
+# Package versions below are synced with the official ROS 2 release listed here.
+# This line is the single source of truth for the pin: the release workflow reads
+# it and refuses to publish if it disagrees with the release tag being built.
+# To bump, pick a newer tag from https://github.com/ros2/ros2/releases, merge its
+# ros2.repos versions in by URL, re-verify the patches, and update this line.
+#
+# ros2-release: release-humble-20260220
 repositories:
   ament/ament_cmake:
     type: git

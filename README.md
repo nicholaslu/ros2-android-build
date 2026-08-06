@@ -2,11 +2,25 @@
 
 Build [rcljava](https://github.com/ros2-java/ros2_java) for Android.  
 
-Package versions are pinned to an official ROS 2 Humble patch release, currently release-humble-20260220.
+Package versions are pinned to an official ROS 2 Humble patch release. The exact
+release is recorded in the `# ros2-release:` line at the top of
+[`ros2_java_android.repos`](./ros2_java_android.repos), which is the single source
+of truth for the pin.
+
+## Releases
+
+Prebuilt libraries are published under [Releases](../../releases). Each release
+corresponds to one official [ros2/ros2](https://github.com/ros2/ros2/releases)
+patch release, and carries two assets:
+
+- `*-soOut.tar.gz` — native libraries → `app/src/main/jniLibs/arm64-v8a`
+- `*-jarOut.tar.gz` — Java libraries → `app/libs/rcljava`
+
+If you only want the libraries, download these instead of building.
 
 ## Environment
 Modify [Dockerfile](./Dockerfile) to change environment.
-- NDK:  android-ndk-r23b
+- NDK:  android-ndk-r28
 - ABI: arm64-v8a  
 - Android API Level: 24
 
@@ -37,3 +51,28 @@ python3 run.py ./out/soOut ./out/jarOut
 ### 4. Copy files to Android Studio project
 Copy `.jar` files to `app/libs/rcljava` and `.so` files to `app/src/main/jniLibs/arm64-v8a`
 and add `implementation fileTree(include: ['*.jar'], dir: 'libs')` to `dependencies{}` of `app/build.gradle`
+
+## How to cut a release
+
+Releases are built by CI from a tag. The tag matches the `ros2/ros2` release
+being built:
+
+```
+release-humble-20260220     # Android build of Humble Patch Release 14
+```
+
+If the same upstream release has to be rebuilt after an Android-side fix, add a
+build number starting at `-2`:
+
+```
+release-humble-20260220-2   # same upstream packages, patched and rebuilt
+```
+
+The `<distro>-<YYYYMMDD>` part must match the `# ros2-release:` pin in
+`ros2_java_android.repos`; CI fails the release if it does not. The release title
+and notes are generated automatically, reusing upstream's own release name.
+
+```
+git tag release-humble-20260220-1
+git push origin release-humble-20260220-1
+```
