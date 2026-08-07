@@ -151,6 +151,8 @@ def main():
     # they stay pinned by hand in the repos file and still need their patches.
     patch(workspacePath, ["src", "ros2", "orocos_kdl_vendor"], ["patches", "orocos_kdl_vendor.patch"])
     patch(workspacePath, ["src", "ros2", "libyaml_vendor"], ["patches", "libyaml_vendor.patch"])
+    patch(workspacePath, ["src", "ros", "pluginlib"], ["patches", "pluginlib.patch"])
+    patch(workspacePath, ["src", "ros", "urdfdom"], ["patches", "urdfdom.patch"])
     patch(workspacePath, ["src", "ros", "kdl_parser"], ["patches", "kdl_parser.patch"])
     patch(workspacePath, ["src", "ros", "robot_state_publisher"], ["patches", "robot_state_publisher.patch"])
     patch(workspacePath, ["src", "ros2", "tinyxml2_vendor"], ["patches", "tinyxml2_vendor.patch"])

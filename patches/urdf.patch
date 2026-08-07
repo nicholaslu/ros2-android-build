@@ -1,3 +1,15 @@
+diff --git a/urdf/package.xml b/urdf/package.xml
+index fe9aeaf..2aa3f64 100644
+--- a/urdf/package.xml
++++ b/urdf/package.xml
+@@ -24,6 +24,7 @@
+ 
+   <build_depend>pluginlib</build_depend>
+   <build_depend>rcutils</build_depend>
++  <depend>tinyxml2_vendor</depend>
+   <build_depend>tinyxml2</build_depend>
+   <build_depend>urdfdom</build_depend>
+   <build_depend>urdf_parser_plugin</build_depend>
 diff --git a/urdf/src/model.cpp b/urdf/src/model.cpp
 index f84fc6a..c637e43 100644
 --- a/urdf/src/model.cpp

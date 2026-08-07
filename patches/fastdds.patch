@@ -1,8 +1,20 @@
+diff --git a/package.xml b/package.xml
+index 990900c01..2f9460e7d 100644
+--- a/package.xml
++++ b/package.xml
+@@ -21,6 +21,7 @@
+   <depend>fastcdr</depend>
+   <depend>foonathan_memory_vendor</depend>
+   <depend>libssl-dev</depend>
++  <depend>tinyxml2_vendor</depend>
+   <depend>tinyxml2</depend>
+   <depend>python3</depend>
+ 
 diff --git a/src/cpp/CMakeLists.txt b/src/cpp/CMakeLists.txt
-index 2165f49..2ebb27f 100644
+index 070597df6..8338e6441 100644
 --- a/src/cpp/CMakeLists.txt
 +++ b/src/cpp/CMakeLists.txt
-@@ -419,11 +419,15 @@ if(NOT CMAKE_ATOMIC_LIB)
+@@ -76,11 +76,15 @@ if(NOT CMAKE_ATOMIC_LIB)
      set(CMAKE_ATOMIC_LIB)
  endif()
  

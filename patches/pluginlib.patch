@@ -1,0 +1,12 @@
+diff --git a/pluginlib/package.xml b/pluginlib/package.xml
+index db0373b..893b800 100644
+--- a/pluginlib/package.xml
++++ b/pluginlib/package.xml
+@@ -27,6 +27,7 @@
+   <depend>class_loader</depend>
+   <depend>rcutils</depend>
+   <depend>rcpputils</depend>
++  <depend>tinyxml2_vendor</depend>
+   <depend>tinyxml2</depend>
+ 
+   <test_depend>ament_cmake_gtest</test_depend>
