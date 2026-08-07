@@ -42,7 +42,7 @@ DOCKER_RUN = 'docker run -it' if sys.stdout.isatty() else 'docker run -i'
 # namespaced by distro, because tmp/ and the image tag would otherwise be shared
 # across branches -- and setupRos2Java() skips the import when src/ already exists,
 # so a branch switch would silently build the other distro's sources.
-DISTRO = 'jazzy'
+DISTRO = 'lyrical'
 IMAGE = f'ros2java-android-build:{DISTRO}'
 
 
@@ -145,9 +145,18 @@ def main():
         # TODO: need to implement
         raise NotImplementedError()
     
-    # tinyxml_vendor: package was dropped from ROS 2 after Humble.
+    # tinyxml_vendor was dropped from ROS 2 after Humble. tinyxml2_vendor and
+    # orocos_kdl_vendor left ros2.repos before Lyrical -- desktop gets those via
+    # rosdep, but an Android cross-build has no system tinyxml2 / orocos_kdl, so
+    # they stay pinned by hand in the repos file and still need their patches.
     patch(workspacePath, ["src", "ros2", "orocos_kdl_vendor"], ["patches", "orocos_kdl_vendor.patch"])
+    patch(workspacePath, ["src", "ros2", "libyaml_vendor"], ["patches", "libyaml_vendor.patch"])
+    patch(workspacePath, ["src", "ros", "kdl_parser"], ["patches", "kdl_parser.patch"])
+    patch(workspacePath, ["src", "ros", "robot_state_publisher"], ["patches", "robot_state_publisher.patch"])
     patch(workspacePath, ["src", "ros2", "tinyxml2_vendor"], ["patches", "tinyxml2_vendor.patch"])
+    patch(workspacePath, ["src", "ros2", "rcutils"], ["patches", "rcutils.patch"])
+    patch(workspacePath, ["src", "ros2", "rcpputils"], ["patches", "rcpputils.patch"])
+    patch(workspacePath, ["src", "ros2", "rclcpp"], ["patches", "rclcpp.patch"])
     patch(workspacePath, ["src", "ros2", "geometry2"], ["patches", "geometry2.patch"])
     patch(workspacePath, ["src", "ros2", "urdf"], ["patches", "urdf.patch"])
     patch(workspacePath, ["src", "ros2-java", "ros2_java"], ["patches", "ros2_java.patch"])

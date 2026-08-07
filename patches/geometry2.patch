@@ -1,49 +1,36 @@
-From f557cf8cb25f1278467f50ef1ba89aa0e0063f6c Mon Sep 17 00:00:00 2001
-From: nicholaslu <nicholaslu1996@gmail.com>
-Date: Mon, 13 Apr 2026 18:35:07 +0900
-Subject: [PATCH] Add new package tf2_java, tf2_ros_java
-
----
- tf2_java/CMakeLists.txt                       |  96 +++++
- tf2_java/package.xml                          |  32 ++
- .../src/main/cpp/org_ros2_tf2_BufferCore.cpp  | 380 ++++++++++++++++++
- .../main/java/org/ros2/tf2/BufferCore.java    | 121 ++++++
- .../ros2/tf2/TF2ConnectivityException.java    |   7 +
- .../main/java/org/ros2/tf2/TF2Exception.java  |   7 +
- .../ros2/tf2/TF2ExtrapolationException.java   |   7 +
- .../ros2/tf2/TF2InvalidArgumentException.java |   7 +
- .../java/org/ros2/tf2/TF2LookupException.java |   7 +
- .../org/ros2/tf2/TF2TimeoutException.java     |   7 +
- tf2_ros_java/CMakeLists.txt                   |  50 +++
- tf2_ros_java/package.xml                      |  33 ++
- .../main/java/org/ros2/tf2_ros/Buffer.java    |  74 ++++
- .../tf2_ros/StaticTransformBroadcaster.java   |  40 ++
- .../ros2/tf2_ros/TransformBroadcaster.java    |  32 ++
- .../org/ros2/tf2_ros/TransformListener.java   |  58 +++
- 22 files changed, 958 insertions(+)
- create mode 100644 tf2_java/CMakeLists.txt
- create mode 100644 tf2_java/package.xml
- create mode 100644 tf2_java/src/main/cpp/org_ros2_tf2_BufferCore.cpp
- create mode 100644 tf2_java/src/main/java/org/ros2/tf2/BufferCore.java
- create mode 100644 tf2_java/src/main/java/org/ros2/tf2/TF2ConnectivityException.java
- create mode 100644 tf2_java/src/main/java/org/ros2/tf2/TF2Exception.java
- create mode 100644 tf2_java/src/main/java/org/ros2/tf2/TF2ExtrapolationException.java
- create mode 100644 tf2_java/src/main/java/org/ros2/tf2/TF2InvalidArgumentException.java
- create mode 100644 tf2_java/src/main/java/org/ros2/tf2/TF2LookupException.java
- create mode 100644 tf2_java/src/main/java/org/ros2/tf2/TF2TimeoutException.java
- create mode 100644 tf2_ros_java/CMakeLists.txt
- create mode 100644 tf2_ros_java/package.xml
- create mode 100644 tf2_ros_java/src/main/java/org/ros2/tf2_ros/Buffer.java
- create mode 100644 tf2_ros_java/src/main/java/org/ros2/tf2_ros/StaticTransformBroadcaster.java
- create mode 100644 tf2_ros_java/src/main/java/org/ros2/tf2_ros/TransformBroadcaster.java
- create mode 100644 tf2_ros_java/src/main/java/org/ros2/tf2_ros/TransformListener.java
-
+diff --git a/tf2_geometry_msgs/CMakeLists.txt b/tf2_geometry_msgs/CMakeLists.txt
+index 97101915..f649a974 100644
+--- a/tf2_geometry_msgs/CMakeLists.txt
++++ b/tf2_geometry_msgs/CMakeLists.txt
+@@ -28,6 +28,10 @@ set(Python3_FIND_UNVERSIONED_NAMES FIRST)
+ find_package(Python3 REQUIRED COMPONENTS Interpreter)
+ 
+ find_package(geometry_msgs REQUIRED)
++# Lyrical expects orocos_kdl from the system (liborocos-kdl-dev via rosdep), which
++# does not exist for an Android cross build. We still vendor it, so pull in the
++# vendor package first -- its -extras.cmake registers the vendored prefix.
++find_package(orocos_kdl_vendor REQUIRED)
+ find_package(orocos_kdl REQUIRED)
+ find_package(tf2 REQUIRED)
+ find_package(tf2_ros REQUIRED)
+diff --git a/tf2_geometry_msgs/package.xml b/tf2_geometry_msgs/package.xml
+index 14cf89e5..b7d4f7ff 100644
+--- a/tf2_geometry_msgs/package.xml
++++ b/tf2_geometry_msgs/package.xml
+@@ -20,6 +20,7 @@
+   <depend>tf2</depend>
+   <depend>tf2_ros</depend>
+ 
++  <depend>orocos_kdl_vendor</depend>
+   <build_depend>liborocos-kdl-dev</build_depend>
+ 
+   <exec_depend>liborocos-kdl</exec_depend>
 diff --git a/tf2_java/CMakeLists.txt b/tf2_java/CMakeLists.txt
 new file mode 100644
-index 00000000..63ec1f36
+index 00000000..2e09baf6
 --- /dev/null
 +++ b/tf2_java/CMakeLists.txt
-@@ -0,0 +1,96 @@
+@@ -0,0 +1,118 @@
 +cmake_minimum_required(VERSION 3.5)
 +project(tf2_java)
 +
@@ -100,7 +87,29 @@ index 00000000..63ec1f36
 +  ${JNI_INCLUDE_DIRS}
 +)
 +
-+ament_target_dependencies(${_jni_target}
++# ament_target_dependencies() was removed in Lyrical (ament_cmake 2.x), but the
++# per-package <pkg>_INCLUDE_DIRS / <pkg>_LIBRARIES / <pkg>_DEFINITIONS variables it
++# consumed are still exported by the ament_cmake_export_* extras. Apply them directly.
++if(NOT COMMAND _tf2_java_target_dependencies)
++  function(_tf2_java_target_dependencies _target)
++    foreach(_pkg ${ARGN})
++      if(NOT ${_pkg}_FOUND)
++        find_package(${_pkg} QUIET REQUIRED)
++      endif()
++      if(${_pkg}_INCLUDE_DIRS)
++        target_include_directories(${_target} PUBLIC ${${_pkg}_INCLUDE_DIRS})
++      endif()
++      if(${_pkg}_LIBRARIES)
++        target_link_libraries(${_target} ${${_pkg}_LIBRARIES})
++      endif()
++      if(${_pkg}_DEFINITIONS)
++        target_compile_definitions(${_target} PUBLIC ${${_pkg}_DEFINITIONS})
++      endif()
++    endforeach()
++  endfunction()
++endif()
++
++_tf2_java_target_dependencies(${_jni_target}
 +  builtin_interfaces
 +  geometry_msgs
 +  rcljava_common
@@ -178,7 +187,6 @@ index 00000000..2e731d1b
 +    <build_type>ament_cmake</build_type>
 +  </export>
 +</package>
-
 diff --git a/tf2_java/src/main/cpp/org_ros2_tf2_BufferCore.cpp b/tf2_java/src/main/cpp/org_ros2_tf2_BufferCore.cpp
 new file mode 100644
 index 00000000..6cf6c25f
@@ -565,7 +573,6 @@ index 00000000..6cf6c25f
 +}
 +
 +}  // extern "C"
-
 diff --git a/tf2_java/src/main/java/org/ros2/tf2/BufferCore.java b/tf2_java/src/main/java/org/ros2/tf2/BufferCore.java
 new file mode 100644
 index 00000000..142ef028
@@ -1094,6 +1101,3 @@ index 00000000..bc8c6227
 +    }
 +  }
 +}
--- 
-2.34.1
-

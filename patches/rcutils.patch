@@ -1,0 +1,16 @@
+diff --git a/src/testing/fault_injection.c b/src/testing/fault_injection.c
+index a8b69d6..8ec9b23 100644
+--- a/src/testing/fault_injection.c
++++ b/src/testing/fault_injection.c
+@@ -16,7 +16,10 @@
+ 
+ #include "rcutils/stdatomic_helper.h"
+ 
+-static atomic_int_least64_t g_rcutils_fault_injection_count = {-1};
++// clang rejects brace-initialising an _Atomic scalar ("illegal initializer
++// type"). Plain scalar initialisation is equivalent and portable; upstream
++// used ATOMIC_VAR_INIT(-1) here until it was removed in C23.
++static atomic_int_least64_t g_rcutils_fault_injection_count = -1;
+ 
+ void rcutils_fault_injection_set_count(int_least64_t count)
+ {

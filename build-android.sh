@@ -14,7 +14,7 @@ colcon build \
     --packages-ignore rcl_logging_log4cxx rcl_logging_spdlog rosidl_generator_py rclandroid ros2_talker_android ros2_listener_android performance_test_fixture osrf_testing_tools_cpp google_benchmark_vendor launch_testing_ament_cmake \
     tf2_kdl tf2_eigen tf2_eigen_kdl tf2_py python_orocos_kdl_vendor tf2_bullet \
     zenoh_security_tools test_rmw_zenoh_cpp \
-    lttngpy \
+    lttngpy rosidl_buffer_py rmw_test_fixture_implementation \
     --cmake-args \
     -DPython3_EXECUTABLE=${PYTHON3_EXEC} \
     -DPython3_LIBRARY=${PYTHON3_LIBRARY} \
@@ -35,6 +35,7 @@ colcon build \
     -DRCL_LOGGING_IMPLEMENTATION=rcl_logging_noop \
     -DEIGEN3_INCLUDE_DIR=/usr/include/eigen3 \
     -DEigen3_DIR=/usr/share/eigen3/cmake \
+    -Dnlohmann_json_DIR=/opt/nlohmann_json \
     -DZENOHC_CUSTOM_TARGET=${ANDROID_TOOLCHAIN_NAME}
 
 ## copy libc++_shared.so

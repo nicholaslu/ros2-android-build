@@ -1,16 +1,16 @@
 diff --git a/urdf/src/model.cpp b/urdf/src/model.cpp
-index a99b2ee..8200ff3 100644
+index f84fc6a..c637e43 100644
 --- a/urdf/src/model.cpp
 +++ b/urdf/src/model.cpp
 @@ -44,6 +44,7 @@
- #include <utility>
- #include <vector>
- 
-+#include "urdf_parser/urdf_parser.h"
- #include "urdf_parser_plugin/parser.h"
+ #include "urdf_parser_plugin/parser.hpp"
  #include "pluginlib/class_loader.hpp"
  
-@@ -138,6 +139,26 @@ bool Model::initString(const std::string & data)
++#include "urdf_parser/urdf_parser.h"
+ // Windows has preprocessor defines for "max", which conflicts with
+ // several things (one of them being std::numeric_limits<T>::max()).  Since
+ // we know we aren't going to use that macros, and this is a cpp (not header
+@@ -137,6 +138,26 @@ bool Model::initString(const std::string & data)
  {
    urdf::ModelInterfaceSharedPtr model;
  

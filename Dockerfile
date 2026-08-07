@@ -1,6 +1,6 @@
-# ROS 2 Jazzy targets Ubuntu 24.04. Note this brings Python 3.12, which no longer
-# ships distutils -- see the sysconfig note in build-android.sh.
-FROM ubuntu:24.04
+# ROS 2 Lyrical Luth targets Ubuntu 26.04 "Resolute Ringtail". Python here is 3.13+
+# and has no distutils -- see the sysconfig note in build-android.sh.
+FROM ubuntu:26.04
 
 # setup non-root user
 ARG USERNAME=user
@@ -46,16 +46,38 @@ RUN apt install -y \
     gradle \
     python3-dev \
     python3-pip \
-    python3-empy \
     python3-colcon-common-extensions \
     python3-vcstool \
     python3-lark \
     libeigen3-dev \
-    libbullet-dev
+    libbullet-dev \
+    nlohmann-json3-dev
 
 # RUN apt install -y git vim cmake build-essential openjdk-8-jdk
 # RUN apt install -y unzip wget gradle python3-pip
 # RUN pip3 install -U colcon-common-extensions vcstool lark colcon-ros-gradle
+
+# rmw_zenoh_cpp needs nlohmann_json, which is header-only. Debian's CMake config
+# lives in /usr/share/cmake/nlohmann_json/ but computes its import prefix by
+# stripping three path components, yielding /usr/share and an include dir of
+# /usr/share/include that does not exist. Host builds do not notice because
+# /usr/include is already on the default include path, but an Android cross build
+# has a different sysroot -- and putting /usr/include on the NDK compile line would
+# expose host glibc headers. So re-expose just these headers under a clean prefix
+# with a minimal config of our own.
+RUN mkdir -p /opt/nlohmann_json/include \
+    && cp -r /usr/include/nlohmann /opt/nlohmann_json/include/ \
+    && printf 'add_library(nlohmann_json::nlohmann_json INTERFACE IMPORTED)\nset_target_properties(nlohmann_json::nlohmann_json PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "/opt/nlohmann_json/include")\n' \
+        > /opt/nlohmann_json/nlohmann_jsonConfig.cmake
+
+# ROS 2 Lyrical's rosidl_pycommon supports both empy 3 and 4, but nested
+# expand_template() calls -- which rosidl_generator_java relies on to emit one .java
+# per message/service from a single IDL -- are broken under the empy 4 code path:
+# the inner expansion's output leaks into the parent's buffer, leaving the real
+# file empty. Ubuntu 26.04 ships empy 4.2.1, so pin the 3.x that Jazzy used.
+# Proper fix would be upstream in ros2_java: do all expansion at top level instead
+# of nesting it inside idl.java.em.
+RUN pip3 install --break-system-packages --no-cache-dir "empy==3.3.4"
 
 RUN wget -O /tmp/android-ndk.zip https://dl.google.com/android/repository/${ANDROID_NDK_VERSION}-linux.zip && mkdir -p /opt/android/ && cd /opt/android/ && unzip -q /tmp/android-ndk.zip && rm /tmp/android-ndk.zip
 

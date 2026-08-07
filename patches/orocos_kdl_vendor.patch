@@ -1,5 +1,5 @@
 diff --git a/orocos_kdl_vendor/CMakeLists.txt b/orocos_kdl_vendor/CMakeLists.txt
-index ae3739a..3b50a45 100644
+index 0f60293..558b89a 100644
 --- a/orocos_kdl_vendor/CMakeLists.txt
 +++ b/orocos_kdl_vendor/CMakeLists.txt
 @@ -13,6 +13,17 @@ if(NOT CMAKE_CXX_STANDARD)
@@ -20,10 +20,10 @@ index ae3739a..3b50a45 100644
  ament_vendor(orocos_kdl_vendor
    SATISFIED ${orocos_kdl_FOUND}
    VCS_URL https://github.com/orocos/orocos_kinematics_dynamics.git
-@@ -22,6 +33,7 @@ ament_vendor(orocos_kdl_vendor
-   CMAKE_ARGS
+@@ -24,6 +35,7 @@ ament_vendor(orocos_kdl_vendor
      -DENABLE_TESTS:BOOL=OFF
      -DENABLE_EXAMPLES:BOOL=OFF
+     -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 +    ${_vendor_eigen_args}
    PATCHES patches
  )

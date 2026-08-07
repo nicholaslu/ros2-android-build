@@ -1,0 +1,31 @@
+diff --git a/src/thread_name.cpp b/src/thread_name.cpp
+index e19603e..d3071ef 100644
+--- a/src/thread_name.cpp
++++ b/src/thread_name.cpp
+@@ -19,6 +19,10 @@
+ #include <vector>
+ #else  // posix and apple
+ #include <pthread.h>
++#if defined(__ANDROID__) && __ANDROID_API__ < 26
++#include <sys/prctl.h>
++#include <cerrno>
++#endif
+ #endif  // defined(_WIN32)
+ 
+ #include <cstddef>
+@@ -123,7 +127,15 @@ std::string get_thread_name()
+   }
+ #else  // posix and apple
+   char thread_name[MAXTHREADNAMESIZE];  // This includes the null terminator
++#if defined(__ANDROID__) && __ANDROID_API__ < 26
++  // Bionic only declares pthread_getname_np from API 26. For the calling thread
++  // prctl(PR_GET_NAME) is equivalent and available at every API level; it writes
++  // at most 16 bytes including the null terminator, which is exactly
++  // MAXTHREADNAMESIZE on this platform.
++  int rc = (prctl(PR_GET_NAME, thread_name) == 0) ? 0 : errno;
++#else
+   int rc = pthread_getname_np(pthread_self(), thread_name, sizeof(thread_name));
++#endif
+   if (rc != 0) {
+     std::error_code error_code(rc, std::system_category());
+     throw std::system_error(error_code, "Failed to get thread name");

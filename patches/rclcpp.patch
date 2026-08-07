@@ -1,0 +1,15 @@
+diff --git a/rclcpp_components/src/component_container.cpp b/rclcpp_components/src/component_container.cpp
+index c0b727fd..7d08041e 100644
+--- a/rclcpp_components/src/component_container.cpp
++++ b/rclcpp_components/src/component_container.cpp
+@@ -199,7 +199,9 @@ int main(int argc, char * argv[])
+     }
+   }
+ 
+-  RCUTILS_LOG_DEBUG_NAMED("component_container", debug_msg.c_str());
++  // Passing a runtime string as the format argument trips -Wformat-security,
++  // which is an error here under -Werror with clang.
++  RCUTILS_LOG_DEBUG_NAMED("component_container", "%s", debug_msg.c_str());
+ 
+   node->set_executor(exec);
+   exec->add_node(node);

@@ -1,5 +1,5 @@
 diff --git a/rcljava/CMakeLists.txt b/rcljava/CMakeLists.txt
-index adf0512..c4258b2 100644
+index adf0512..83c1a56 100644
 --- a/rcljava/CMakeLists.txt
 +++ b/rcljava/CMakeLists.txt
 @@ -12,6 +12,10 @@ find_package(rcl_interfaces REQUIRED)
@@ -13,15 +13,39 @@ index adf0512..c4258b2 100644
  
  include(CrossCompilingExtra)
  
-@@ -41,7 +45,6 @@ include_directories(include)
+@@ -39,9 +43,30 @@ set(CMAKE_JAVA_COMPILE_FLAGS "-source" "1.6" "-target" "1.6")
  
+ include_directories(include)
+ 
++# ament_target_dependencies() was removed in Lyrical (ament_cmake 2.x), but the
++# per-package <pkg>_INCLUDE_DIRS / <pkg>_LIBRARIES / <pkg>_DEFINITIONS variables it
++# consumed are still exported by the ament_cmake_export_* extras. Apply them directly.
++if(NOT COMMAND _rcljava_target_dependencies)
++  function(_rcljava_target_dependencies _target)
++    foreach(_pkg ${ARGN})
++      if(NOT ${_pkg}_FOUND)
++        find_package(${_pkg} QUIET REQUIRED)
++      endif()
++      if(${_pkg}_INCLUDE_DIRS)
++        target_include_directories(${_target} PUBLIC ${${_pkg}_INCLUDE_DIRS})
++      endif()
++      if(${_pkg}_LIBRARIES)
++        target_link_libraries(${_target} ${${_pkg}_LIBRARIES})
++      endif()
++      if(${_pkg}_DEFINITIONS)
++        target_compile_definitions(${_target} PUBLIC ${${_pkg}_DEFINITIONS})
++      endif()
++    endforeach()
++  endfunction()
++endif()
++
  function(set_properties _target_name _build_type)
    set_target_properties(${_target_name} PROPERTIES
 -    PREFIX ""
      LIBRARY_OUTPUT_DIRECTORY${_build_type} "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}"
      RUNTIME_OUTPUT_DIRECTORY${_build_type} "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}"
    )
-@@ -93,7 +96,8 @@ foreach(_jni_source ${${PROJECT_NAME}_jni_sources})
+@@ -93,7 +118,8 @@ foreach(_jni_source ${${PROJECT_NAME}_jni_sources})
      set(_jni_prefix "lib")
    endif()
    set_target_properties(${_target_name} PROPERTIES
@@ -31,6 +55,15 @@ index adf0512..c4258b2 100644
    )
  
    set_properties("${_target_name}" "")
+@@ -104,7 +130,7 @@ foreach(_jni_source ${${PROJECT_NAME}_jni_sources})
+     set_properties("${_target_name}" "_RELWITHDEBINFO")
+   endif()
+ 
+-  ament_target_dependencies(${_target_name}
++  _rcljava_target_dependencies(${_target_name}
+     "builtin_interfaces"
+     "rcl"
+     "rcljava_common"
 diff --git a/rcljava/package.xml b/rcljava/package.xml
 index 0ca7574..869faf2 100644
 --- a/rcljava/package.xml
@@ -69,6 +102,23 @@ index 287a175..33c0607 100644
    request_id->sequence_number = env->GetLongField(jrequest_id, jsequence_number_field_id);
  
    jsize writer_guid_len = 16;  // See rmw/rmw/include/rmw/types.h
+diff --git a/rcljava/src/main/cpp/org_ros2_rcljava_node_NodeImpl.cpp b/rcljava/src/main/cpp/org_ros2_rcljava_node_NodeImpl.cpp
+index a7c662f..1b1784b 100644
+--- a/rcljava/src/main/cpp/org_ros2_rcljava_node_NodeImpl.cpp
++++ b/rcljava/src/main/cpp/org_ros2_rcljava_node_NodeImpl.cpp
+@@ -228,8 +228,10 @@ Java_org_ros2_rcljava_node_NodeImpl_nativeCreateTimerHandle(
+   rcl_timer_t * timer = static_cast<rcl_timer_t *>(malloc(sizeof(rcl_timer_t)));
+   *timer = rcl_get_zero_initialized_timer();
+ 
+-  rcl_ret_t ret = rcl_timer_init(
+-    timer, clock, context, timer_period, NULL, rcl_get_default_allocator());
++  // rcl_timer_init() was removed in Lyrical (rcl 10.x). rcl_timer_init2() is the
++  // replacement; the trailing autostart=true reproduces the old behaviour.
++  rcl_ret_t ret = rcl_timer_init2(
++    timer, clock, context, timer_period, NULL, rcl_get_default_allocator(), true);
+ 
+   if (ret != RCL_RET_OK) {
+     std::string msg = "Failed to create timer: " + std::string(rcl_get_error_string().str);
 diff --git a/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java b/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java
 index 58661a7..b5e0f11 100644
 --- a/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java
@@ -108,3 +158,69 @@ index 58661a7..b5e0f11 100644
 +    }
    }
  }
+diff --git a/rosidl_generator_java/cmake/rosidl_generator_java_generate_interfaces.cmake b/rosidl_generator_java/cmake/rosidl_generator_java_generate_interfaces.cmake
+index 0093329..4744057 100644
+--- a/rosidl_generator_java/cmake/rosidl_generator_java_generate_interfaces.cmake
++++ b/rosidl_generator_java/cmake/rosidl_generator_java_generate_interfaces.cmake
+@@ -206,6 +206,29 @@ macro(set_properties _build_type)
+     OUTPUT_NAME "${_library_path}")
+ endmacro()
+ 
++# ament_target_dependencies() was removed in Lyrical (ament_cmake 2.x), but the
++# per-package <pkg>_INCLUDE_DIRS / <pkg>_LIBRARIES / <pkg>_DEFINITIONS variables it
++# consumed are still exported by the ament_cmake_export_* extras. Apply them
++# directly so both call sites below keep working.
++if(NOT COMMAND _rcljava_target_dependencies)
++  function(_rcljava_target_dependencies _target)
++    foreach(_pkg ${ARGN})
++      if(NOT ${_pkg}_FOUND)
++        find_package(${_pkg} QUIET REQUIRED)
++      endif()
++      if(${_pkg}_INCLUDE_DIRS)
++        target_include_directories(${_target} PUBLIC ${${_pkg}_INCLUDE_DIRS})
++      endif()
++      if(${_pkg}_LIBRARIES)
++        target_link_libraries(${_target} ${${_pkg}_LIBRARIES})
++      endif()
++      if(${_pkg}_DEFINITIONS)
++        target_compile_definitions(${_target} PUBLIC ${${_pkg}_DEFINITIONS})
++      endif()
++    endforeach()
++  endfunction()
++endif()
++
+ foreach(_generated_cpp_file ${_generated_extension_files})
+   list(FIND _generated_extension_files ${_generated_cpp_file} _file_index)
+   list(GET _typesupport_by_generated_cpp_files ${_file_index} _typesupport_impl)
+@@ -256,15 +279,19 @@ foreach(_generated_cpp_file ${_generated_extension_files})
+     ${rosidl_generate_interfaces_TARGET}__rosidl_generator_c
+     ${_extension_link_flags}
+   )
+-  rosidl_target_interfaces(${_library_name}
+-    ${PROJECT_NAME} rosidl_typesupport_c)
++  # rosidl_target_interfaces() was removed in Lyrical (rosidl 5.x); it was already
++  # deprecated in Jazzy. The replacement resolves the typesupport target by name,
++  # and linking it also propagates the generated interface include dirs.
++  rosidl_get_typesupport_target(_java_typesupport_target
++    "${PROJECT_NAME}" "rosidl_typesupport_c")
++  target_link_libraries(${_library_name} "${_java_typesupport_target}")
+   target_include_directories(${_library_name}
+     PUBLIC
+     ${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_c
+     ${CMAKE_CURRENT_BINARY_DIR}/rosidl_generator_java
+     ${JNI_INCLUDE_DIRS}
+   )
+-  ament_target_dependencies(${_library_name}
++  _rcljava_target_dependencies(${_library_name}
+     "rosidl_generator_c"
+     "rosidl_generator_java"
+     "rcljava_common"
+@@ -272,7 +299,7 @@ foreach(_generated_cpp_file ${_generated_extension_files})
+     "rosidl_typesupport_interface"
+   )
+   foreach(_pkg_name ${rosidl_generate_interfaces_DEPENDENCY_PACKAGE_NAMES})
+-    ament_target_dependencies(${_library_name}
++    _rcljava_target_dependencies(${_library_name}
+       ${_pkg_name}
+     )
+     target_link_libraries(${_library_name} ${${_pkg_name}_JNI_LIBRARIES})
