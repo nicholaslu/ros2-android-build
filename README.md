@@ -2,6 +2,14 @@
 
 Build [rcljava](https://github.com/ros2-java/ros2_java) for Android.  
 
+**This is the `humble` branch.** The repository carries one branch per ROS 2 distro:
+
+| Branch | Distro | Upstream EOL |
+|---|---|---|
+| `humble` | Humble Hawksbill | May 2027 |
+| [`jazzy`](../../tree/jazzy) | Jazzy Jalisco | May 2029 |
+| [`lyrical`](../../tree/lyrical) | Lyrical Luth | May 2031 |
+
 Package versions are pinned to an official ROS 2 Humble patch release. The exact
 release is recorded in the `# ros2-release:` line at the top of
 [`ros2_java_android.repos`](./ros2_java_android.repos), which is the single source
@@ -28,7 +36,8 @@ Modify [Dockerfile](./Dockerfile) to change environment.
 
 Modify [repo](./ros2_java_android.repos) to change ROS2 version.
 
-Currently ROS2 Humble is selectd for the building.
+Currently ROS2 Humble is selected for the building. To build a different distro,
+check out that distro's branch.
 
 ## How to build
 
@@ -40,7 +49,7 @@ cd ros2-android-build/
 
 ### 2. Build docker image
 ```
-docker build -t ros2java-android-build ./
+docker build -t ros2java-android-build:humble ./
 ```
 
 ### 3. Build
@@ -69,7 +78,8 @@ release-humble-20260220-2   # same upstream packages, patched and rebuilt
 ```
 
 The `<distro>-<YYYYMMDD>` part must match the `# ros2-release:` pin in
-`ros2_java_android.repos`; CI fails the release if it does not. The release title
+`ros2_java_android.repos`; CI fails the release if it does not. Tag the branch
+whose distro you are releasing. The release title
 and notes are generated automatically, reusing upstream's own release name.
 
 ```
