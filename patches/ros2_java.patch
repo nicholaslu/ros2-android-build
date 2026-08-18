@@ -119,6 +119,81 @@ index a7c662f..1b1784b 100644
  
    if (ret != RCL_RET_OK) {
      std::string msg = "Failed to create timer: " + std::string(rcl_get_error_string().str);
+diff --git a/rcljava/src/main/java/org/ros2/rcljava/parameters/ParameterVariant.java b/rcljava/src/main/java/org/ros2/rcljava/parameters/ParameterVariant.java
+index 8f7484c..b9e8c90 100644
+--- a/rcljava/src/main/java/org/ros2/rcljava/parameters/ParameterVariant.java
++++ b/rcljava/src/main/java/org/ros2/rcljava/parameters/ParameterVariant.java
+@@ -207,28 +207,28 @@ public class ParameterVariant {
+     if (getType() != ParameterType.PARAMETER_BYTE_ARRAY) {
+       throw new IllegalArgumentException("Invalid type");
+     }
+-    return this.value.getByteArrayValue().toArray(new Byte[0]);
++    return this.value.getByteArrayValueAsList().toArray(new Byte[0]);
+   }
+ 
+   public final Boolean[] asBooleanArray() {
+     if (getType() != ParameterType.PARAMETER_BOOL_ARRAY) {
+       throw new IllegalArgumentException("Invalid type");
+     }
+-    return this.value.getBoolArrayValue().toArray(new Boolean[0]);
++    return this.value.getBoolArrayValueAsList().toArray(new Boolean[0]);
+   }
+ 
+   public final Long[] asIntegerArray() {
+     if (getType() != ParameterType.PARAMETER_INTEGER_ARRAY) {
+       throw new IllegalArgumentException("Invalid type");
+     }
+-    return this.value.getIntegerArrayValue().toArray(new Long[0]);
++    return this.value.getIntegerArrayValueAsList().toArray(new Long[0]);
+   }
+ 
+   public final Double[] asDoubleArray() {
+     if (getType() != ParameterType.PARAMETER_DOUBLE_ARRAY) {
+       throw new IllegalArgumentException("Invalid type");
+     }
+-    return this.value.getDoubleArrayValue().toArray(new Double[0]);
++    return this.value.getDoubleArrayValueAsList().toArray(new Double[0]);
+   }
+ 
+   public final String[] asStringArray() {
+@@ -256,13 +256,13 @@ public class ParameterVariant {
+       case rcl_interfaces.msg.ParameterType.PARAMETER_STRING:
+         return new ParameterVariant(parameter.getName(), parameter.getValue().getStringValue());
+       case rcl_interfaces.msg.ParameterType.PARAMETER_BYTE_ARRAY:
+-        return new ParameterVariant(parameter.getName(), parameter.getValue().getByteArrayValue().toArray(new Byte[0]));
++        return new ParameterVariant(parameter.getName(), parameter.getValue().getByteArrayValueAsList().toArray(new Byte[0]));
+       case rcl_interfaces.msg.ParameterType.PARAMETER_BOOL_ARRAY:
+-        return new ParameterVariant(parameter.getName(), parameter.getValue().getBoolArrayValue().toArray(new Boolean[0]));
++        return new ParameterVariant(parameter.getName(), parameter.getValue().getBoolArrayValueAsList().toArray(new Boolean[0]));
+       case rcl_interfaces.msg.ParameterType.PARAMETER_INTEGER_ARRAY:
+-        return new ParameterVariant(parameter.getName(), parameter.getValue().getIntegerArrayValue().toArray(new Long[0]));
++        return new ParameterVariant(parameter.getName(), parameter.getValue().getIntegerArrayValueAsList().toArray(new Long[0]));
+       case rcl_interfaces.msg.ParameterType.PARAMETER_DOUBLE_ARRAY:
+-        return new ParameterVariant(parameter.getName(), parameter.getValue().getDoubleArrayValue().toArray(new Double[0]));
++        return new ParameterVariant(parameter.getName(), parameter.getValue().getDoubleArrayValueAsList().toArray(new Double[0]));
+       case rcl_interfaces.msg.ParameterType.PARAMETER_STRING_ARRAY:
+         return new ParameterVariant(parameter.getName(), parameter.getValue().getStringArrayValue().toArray(new String[0]));
+       case rcl_interfaces.msg.ParameterType.PARAMETER_NOT_SET:
+diff --git a/rcljava/src/main/java/org/ros2/rcljava/parameters/client/AsyncParametersClientImpl.java b/rcljava/src/main/java/org/ros2/rcljava/parameters/client/AsyncParametersClientImpl.java
+index 6d60c22..c10aa7e 100644
+--- a/rcljava/src/main/java/org/ros2/rcljava/parameters/client/AsyncParametersClientImpl.java
++++ b/rcljava/src/main/java/org/ros2/rcljava/parameters/client/AsyncParametersClientImpl.java
+@@ -151,13 +151,13 @@ public class AsyncParametersClientImpl implements AsyncParametersClient {
+         request, new Consumer<Future<rcl_interfaces.srv.GetParameterTypes_Response>>() {
+           public void accept(final Future<rcl_interfaces.srv.GetParameterTypes_Response> future) {
+             List<ParameterType> parameterTypes = new ArrayList<ParameterType>();
+-            List<Byte> pts = null;
++            byte[] pts = null;
+             try {
+               pts = future.get().getTypes();
+             } catch (Exception e) {
+               // TODO(esteve): do something
+             }
+-            for (Byte pt : pts) {
++            for (byte pt : pts) {
+               parameterTypes.add(ParameterType.fromByte(pt));
+             }
+             futureResult.set(parameterTypes);
 diff --git a/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java b/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java
 index 58661a7..b5e0f11 100644
 --- a/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java
@@ -224,3 +299,262 @@ index 0093329..4744057 100644
        ${_pkg_name}
      )
      target_link_libraries(${_library_name} ${${_pkg_name}_JNI_LIBRARIES})
+diff --git a/rosidl_generator_java/resource/msg.cpp.em b/rosidl_generator_java/resource/msg.cpp.em
+index a7008a5..5138fa4 100644
+--- a/rosidl_generator_java/resource/msg.cpp.em
++++ b/rosidl_generator_java/resource/msg.cpp.em
+@@ -6,6 +6,10 @@ from rosidl_generator_c import basetype_to_c
+ from rosidl_generator_c import idl_structure_type_to_c_include_prefix
+ from rosidl_generator_java import constructor_signatures
+ from rosidl_generator_java import get_java_type
++from rosidl_generator_java import get_jni_array_infix
++from rosidl_generator_java import get_jni_array_signature
++from rosidl_generator_java import get_jni_array_type
++from rosidl_generator_java import get_jni_element_type
+ from rosidl_generator_java import get_jni_signature
+ from rosidl_generator_java import get_jni_type
+ from rosidl_generator_java import get_normalized_type
+@@ -222,7 +226,44 @@ JNIEXPORT jlong JNICALL Java_@(underscore_separated_jni_type_name)_getDestructor
+ @{
+ normalized_type = get_normalized_type(member.type)
+ }@
+-@[  if isinstance(member.type, AbstractNestedType)]
++@[  if isinstance(member.type, AbstractNestedType) and isinstance(member.type.value_type, BasicType)]
++@{
++jarray_type = get_jni_array_type(member.type)
++jelement_type = get_jni_element_type(member.type)
++jarray_infix = get_jni_array_infix(member.type)
++jarray_signature = get_jni_array_signature(member.type)
++}@
++@# Members of basic type are Java primitive arrays: pull the whole buffer across
++@# in one go instead of one List.get()/unbox/DeleteLocalRef trio per element.
++  auto _jfield_@(member.name)_fid = env->GetFieldID(_j@(msg_normalized_type)_class_global, "@(member.name)", "@(jarray_signature)");
++  @(jarray_type) _jarray_@(member.name)_object = static_cast<@(jarray_type)>(env->GetObjectField(_jmessage_obj, _jfield_@(member.name)_fid));
++
++  if (_jarray_@(member.name)_object != nullptr) {
++    jsize _jarray_@(member.name)_length = env->GetArrayLength(_jarray_@(member.name)_object);
++@[    if isinstance(member.type, AbstractSequence)]@
++    if (!rosidl_runtime_c__@(member.type.value_type.typename)__Sequence__init(&(ros_message->@(member.name)), _jarray_@(member.name)_length)) {
++      rcljava_throw_exception(env, "java/lang/IllegalStateException", "unable to create @(member.type.value_type)__Array ros_message");
++    }
++    jsize _jarray_@(member.name)_size = _jarray_@(member.name)_length;
++    auto _dest_@(member.name) = ros_message->@(member.name).data;
++@[    else]@
++@#  The Java setter enforces the exact length, but clamp anyway so a field set by
++@#  other means can never overrun the fixed-size C array.
++    jsize _jarray_@(member.name)_size =
++      _jarray_@(member.name)_length < @(member.type.size) ? _jarray_@(member.name)_length : @(member.type.size);
++    auto _dest_@(member.name) = ros_message->@(member.name);
++@[    end if]@
++
++    @(jelement_type) * _src_@(member.name) = env->Get@(jarray_infix)ArrayElements(_jarray_@(member.name)_object, nullptr);
++    if (_src_@(member.name) != nullptr) {
++      for (jsize i = 0; i < _jarray_@(member.name)_size; ++i) {
++        _dest_@(member.name)[i] = _src_@(member.name)[i];
++      }
++      env->Release@(jarray_infix)ArrayElements(_jarray_@(member.name)_object, _src_@(member.name), JNI_ABORT);
++    }
++    env->DeleteLocalRef(_jarray_@(member.name)_object);
++  }
++@[  elif isinstance(member.type, AbstractNestedType)]
+   auto _jfield_@(member.name)_fid = env->GetFieldID(_j@(msg_normalized_type)_class_global, "@(member.name)", "L@(list_jni_type);");
+   jobject _jlist_@(member.name)_object = env->GetObjectField(_jmessage_obj, _jfield_@(member.name)_fid);
+ 
+@@ -351,8 +392,41 @@ jobject @(underscore_separated_type_name)__convert_to_java(@(msg_normalized_type
+ @{
+ normalized_type = get_normalized_type(member.type)
+ }@
+-@[  if isinstance(member.type, AbstractNestedType)]@
+-@[    if isinstance(member.type.value_type, (BasicType, AbstractGenericString))]@
++@[  if isinstance(member.type, AbstractNestedType) and isinstance(member.type.value_type, BasicType)]@
++@{
++jarray_type = get_jni_array_type(member.type)
++jelement_type = get_jni_element_type(member.type)
++jarray_infix = get_jni_array_infix(member.type)
++jarray_signature = get_jni_array_signature(member.type)
++}@
++@# One allocation and one bulk copy per member. The previous code boxed every
++@# element with NewObject() -- bypassing the Byte/Short/... valueOf caches -- and
++@# never released the resulting local references, overflowing the local reference
++@# table on large arrays.
++  auto _jfield_@(member.name)_fid = env->GetFieldID(_j@(msg_normalized_type)_class_global, "@(member.name)", "@(jarray_signature)");
++  {
++@[    if isinstance(member.type, Array)]@
++    jsize _jarray_@(member.name)_size = @(member.type.size);
++    auto _src_@(member.name) = _ros_message->@(member.name);
++@[    else]@
++    jsize _jarray_@(member.name)_size = static_cast<jsize>(_ros_message->@(member.name).size);
++    auto _src_@(member.name) = _ros_message->@(member.name).data;
++@[    end if]@
++    @(jarray_type) _jarray_@(member.name)_obj = env->New@(jarray_infix)Array(_jarray_@(member.name)_size);
++    if (_jarray_@(member.name)_obj != nullptr) {
++      @(jelement_type) * _dest_@(member.name) = env->Get@(jarray_infix)ArrayElements(_jarray_@(member.name)_obj, nullptr);
++      if (_dest_@(member.name) != nullptr) {
++        for (jsize i = 0; i < _jarray_@(member.name)_size; ++i) {
++          _dest_@(member.name)[i] = _src_@(member.name)[i];
++        }
++        env->Release@(jarray_infix)ArrayElements(_jarray_@(member.name)_obj, _dest_@(member.name), 0);
++      }
++      env->SetObjectField(_jmessage_obj, _jfield_@(member.name)_fid, _jarray_@(member.name)_obj);
++      env->DeleteLocalRef(_jarray_@(member.name)_obj);
++    }
++  }
++@[  elif isinstance(member.type, AbstractNestedType)]@
++@[    if isinstance(member.type.value_type, AbstractGenericString)]@
+   auto _jfield_@(member.name)_fid = env->GetFieldID(_j@(msg_normalized_type)_class_global, "@(member.name)", "L@(list_jni_type);");
+   jobject _jarray_list_@(member.name)_obj = env->NewObject(_j@(array_list_normalized_type)_class_global, _j@(array_list_normalized_type)_constructor_global);
+   // TODO(esteve): replace ArrayList with a jobjectArray to initialize the array beforehand
+@@ -364,22 +438,20 @@ normalized_type = get_normalized_type(member.type)
+   for (size_t i = 0; i < _ros_message->@(member.name).size; ++i) {
+     auto _ros_@(member.name)_element = _ros_message->@(member.name).data[i];
+ @[      end if]@
+-@[      if isinstance(member.type.value_type, AbstractGenericString)]@
+     jobject _jlist_@(member.name)_element = nullptr;
+     if (_ros_@(member.name)_element.data != nullptr) {
+-@[        if isinstance(member.type.value_type, AbstractString)]@
++@[      if isinstance(member.type.value_type, AbstractString)]@
+       _jlist_@(member.name)_element = env->NewStringUTF(_ros_@(member.name)_element.data);
+-@[        else]@
+-      _jlist_@(member.name)_element = env->NewString(_ros_@(member.name)_element.data, _ros_@(member.name)_element.size);
+-@[        end if]@
+-    }
+ @[      else]@
+-    jobject _jlist_@(member.name)_element = env->NewObject(
+-      _j@(normalized_type)_class_global, _j@(normalized_type)_constructor_global, _ros_@(member.name)_element);
++      _jlist_@(member.name)_element = env->NewString(_ros_@(member.name)_element.data, _ros_@(member.name)_element.size);
+ @[      end if]@
++    }
+     if (_jlist_@(member.name)_element != nullptr) {
+       jboolean _jlist_@(member.name)_add_result = env->CallBooleanMethod(_jarray_list_@(member.name)_obj, _jlist_@(member.name)_add_mid, _jlist_@(member.name)_element);
+       assert(_jlist_@(member.name)_add_result);
++      // Release the element reference: the list holds it, and the local reference
++      // table is bounded -- leaking one per element overflows it on large arrays.
++      env->DeleteLocalRef(_jlist_@(member.name)_element);
+     }
+   }
+ @[    else]@
+@@ -399,6 +471,7 @@ normalized_type = get_normalized_type(member.type)
+     if (_jlist_@(member.name)_element != nullptr) {
+       jboolean _jlist_@(member.name)_add_result = env->CallBooleanMethod(_jarray_list_@(member.name)_obj, _jlist_@(member.name)_add_mid, _jlist_@(member.name)_element);
+       assert(_jlist_@(member.name)_add_result);
++      env->DeleteLocalRef(_jlist_@(member.name)_element);
+     }
+   }
+ @[    end if]@
+diff --git a/rosidl_generator_java/resource/msg.java.em b/rosidl_generator_java/resource/msg.java.em
+index cb6e1b3..a8ce2b1 100644
+--- a/rosidl_generator_java/resource/msg.java.em
++++ b/rosidl_generator_java/resource/msg.java.em
+@@ -78,7 +78,59 @@ public final class @(type_name) implements MessageDefinition {
+ 
+ @[for member in message.structure.members]@
+ 
+-@[  if isinstance(member.type, AbstractNestedType)]@
++@[  if isinstance(member.type, AbstractNestedType) and isinstance(member.type.value_type, BasicType)]@
++@{
++prim = get_java_type(member.type, use_primitives=True)
++boxed = get_java_type(member.type, use_primitives=False)
++camel_name = convert_lower_case_underscore_to_camel_case(member.name)
++}@
++@# Sequences and arrays of basic type are stored as Java primitive arrays so the
++@# native converters can copy them in bulk. The boxed java.util.List<T> form used
++@# to cost three JNI calls per element on publish and allocated one boxed object
++@# per element on receive.
++@[    if member.has_annotation('default')]@
++  private @(prim)[] @(member.name) = new @(prim)[] @(value_to_java(member.type, member.get_annotation_value('default')['value']));
++@[    elif isinstance(member.type, Array)]@
++  private @(prim)[] @(member.name) = new @(prim)[@(member.type.size)];
++@[    else]@
++  private @(prim)[] @(member.name) = new @(prim)[0];
++@[    end if]@
++
++  public final @(type_name) set@(camel_name)(final @(prim)[] @(member.name)) {
++@[    if isinstance(member.type, BoundedSequence)]@
++    if(@(member.name).length > @(member.type.maximum_size)) {
++        throw new IllegalArgumentException("Array too big, maximum size allowed: @(member.type.maximum_size)");
++    }
++@[    elif isinstance(member.type, Array)]@
++    if(@(member.name).length != @(member.type.size)) {
++        throw new IllegalArgumentException("Invalid size for fixed array, must be exactly: @(member.type.size)");
++    }
++@[    end if]@
++    this.@(member.name) = @(member.name);
++    return this;
++  }
++
++  public final @(type_name) set@(camel_name)(final java.util.List<@(boxed)> @(member.name)) {
++    @(prim)[] @(member.name)_tmp = new @(prim)[@(member.name).size()];
++    int @(member.name)_i = 0;
++    for(@(boxed) @(member.name)_value : @(member.name)) {
++      @(member.name)_tmp[@(member.name)_i++] = @(member.name)_value;
++    }
++    return set@(camel_name)(@(member.name)_tmp);
++  }
++
++  public final @(prim)[] get@(camel_name)() {
++    return this.@(member.name);
++  }
++
++  public final java.util.List<@(boxed)> get@(camel_name)AsList() {
++    java.util.List<@(boxed)> @(member.name)_tmp = new java.util.ArrayList<@(boxed)>(this.@(member.name).length);
++    for(@(prim) @(member.name)_value : this.@(member.name)) {
++      @(member.name)_tmp.add(@(member.name)_value);
++    }
++    return @(member.name)_tmp;
++  }
++@[  elif isinstance(member.type, AbstractNestedType)]@
+ @[    if member.has_annotation('default')]@
+   private java.util.List<@(get_java_type(member.type, use_primitives=False))> @(member.name) = java.util.Arrays.asList(new @(get_java_type(member.type, use_primitives=False))[] @(value_to_java(member.type, member.get_annotation_value('default')['value'])));
+ @[    else]@
+diff --git a/rosidl_generator_java/rosidl_generator_java/__init__.py b/rosidl_generator_java/rosidl_generator_java/__init__.py
+index d13cad5..3d353b7 100644
+--- a/rosidl_generator_java/rosidl_generator_java/__init__.py
++++ b/rosidl_generator_java/rosidl_generator_java/__init__.py
+@@ -158,6 +158,47 @@ def get_normalized_type(type_):
+     return get_java_type(type_, use_primitives=False).replace('.', '__')
+ 
+ 
++# Java primitive -> JNI type signature letter. Used to declare sequence and array
++# members of basic type as Java primitive arrays (byte[], double[], ...) rather
++# than boxed java.util.List<T>, so they can be marshalled in bulk instead of one
++# JNI call per element.
++JAVA_PRIMITIVE_TO_JNI_SIGNATURE = {
++    'boolean': 'Z',
++    'byte': 'B',
++    'char': 'C',
++    'short': 'S',
++    'int': 'I',
++    'long': 'J',
++    'float': 'F',
++    'double': 'D',
++}
++
++
++def get_java_primitive(type_):
++    """Java primitive name of a basic type, unwrapping sequences and arrays."""
++    return get_java_type(type_, use_primitives=True)
++
++
++def get_jni_array_type(type_):
++    """JNI array type of a basic type, e.g. 'jbyteArray' for uint8[]."""
++    return 'j%sArray' % get_java_primitive(type_)
++
++
++def get_jni_element_type(type_):
++    """JNI element type of a basic type, e.g. 'jbyte' for uint8[]."""
++    return 'j%s' % get_java_primitive(type_)
++
++
++def get_jni_array_infix(type_):
++    """JNI function infix of a basic type, e.g. 'Byte' in GetByteArrayElements."""
++    return get_java_primitive(type_).capitalize()
++
++
++def get_jni_array_signature(type_):
++    """JNI field signature of a primitive array, e.g. '[B' for uint8[]."""
++    return '[' + JAVA_PRIMITIVE_TO_JNI_SIGNATURE[get_java_primitive(type_)]
++
++
+ def get_jni_type(type_):
+     return get_java_type(type_, use_primitives=False).replace('.', '/')
+ 
