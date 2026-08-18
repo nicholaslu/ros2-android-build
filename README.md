@@ -6,8 +6,9 @@ Build [rcljava](https://github.com/ros2-java/ros2_java) for Android.
 
 | Branch | Distro | Upstream EOL |
 |---|---|---|
-| [`main`](../../tree/main) | Humble Hawksbill | May 2027 |
+| [`humble`](../../tree/humble) | Humble Hawksbill | May 2027 |
 | `jazzy` | Jazzy Jalisco | May 2029 |
+| [`lyrical`](../../tree/lyrical) | Lyrical Luth | May 2031 |
 
 Package versions are pinned to an official ROS 2 Jazzy patch release. The exact
 release is recorded in the `# ros2-release:` line at the top of
@@ -37,6 +38,33 @@ Modify [repo](./ros2_java_android.repos) to change ROS2 version.
 
 Currently ROS2 Jazzy is selected for the building. To build a different distro,
 check out that distro's branch.
+
+## Message array fields differ from upstream ros2_java
+
+Sequence and array members of basic type (`uint8[]`, `float64[]`, `float64[9]`, …)
+are generated as Java **primitive arrays** — `byte[]`, `double[]` — not the
+`java.util.List<Byte>` / `List<Double>` that upstream `rosidl_generator_java`
+produces. See [`patches/ros2_java.patch`](./patches/ros2_java.patch).
+
+Upstream marshals these one element at a time: three JNI calls per element when
+publishing, and one boxed object allocated per element when receiving. For bulk
+data that dominates everything else — a 42 KB `uint8[]` measured ~69 ms per
+`publish()` on an Android phone, capping a 60 fps video topic near 12 Mbps. As
+primitive arrays the same field is a single bulk copy.
+
+| Accessor | Change |
+|---|---|
+| `setX(byte[])` | Same signature. No longer copies element by element. |
+| `getX()` | Returns `byte[]` instead of `List<Byte>`. |
+| `getXAsList()` | Added, for callers that still want the boxed list. |
+| `setX(List<Byte>)` | Still accepted. |
+
+Note that `setX(byte[])` now **stores the array by reference** rather than copying
+it. Do not mutate a buffer after handing it to a message. Use `setX(List<Byte>)`
+if you need the old copying behaviour.
+
+`string[]` and arrays of messages are unaffected — they remain `List<String>` and
+`List<MessageType>`, since their per-element JNI cost is inherent.
 
 ## How to build
 
