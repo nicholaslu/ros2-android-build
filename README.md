@@ -1,78 +1,53 @@
 # ros2-android-build
 
-Build [rcljava](https://github.com/ros2-java/ros2_java) for Android.  
+Cross-compile [rcljava](https://github.com/ros2-java/ros2_java) — the ROS 2 Java
+client library — and its dependencies for Android.
 
-Package versions are pinned to an official ROS 2 Humble patch release. The exact
-release is recorded in the `# ros2-release:` line at the top of
-[`ros2_java_android.repos`](./ros2_java_android.repos), which is the single source
-of truth for the pin.
+**This branch carries no build files.** The build lives on one branch per ROS 2
+distro, each self-contained: its own pinned `.repos` file, patch set, Dockerfile
+and CI workflow. Pick the branch for the distro you want.
 
-## Releases
+| Branch | Distro | Upstream pin | Base image | Upstream EOL |
+|---|---|---|---|---|
+| [`humble`](../../tree/humble)   | Humble Hawksbill | `release-humble-20260220`  | Ubuntu 22.04 | May 2027 |
+| [`jazzy`](../../tree/jazzy)     | Jazzy Jalisco    | `release-jazzy-20260618`   | Ubuntu 24.04 | May 2029 |
+| [`lyrical`](../../tree/lyrical) | Lyrical Luth     | `release-lyrical-20260623` | Ubuntu 26.04 | May 2031 |
 
-Prebuilt libraries are published under [Releases](../../releases). Each release
-corresponds to one official [ros2/ros2](https://github.com/ros2/ros2/releases)
-patch release, and carries two assets:
+Each branch's pin is recorded in the `# ros2-release:` line at the top of its
+`ros2_java_android.repos` and matches an official
+[ros2/ros2 release](https://github.com/ros2/ros2/releases) tag. That line is the
+single source of truth: CI refuses to publish a release whose tag disagrees with it.
+
+## Prebuilt libraries
+
+Most people want [Releases](../../releases) rather than a build. Each release is
+tagged `release-<distro>-<YYYYMMDD>` and carries:
 
 - `*-soOut.tar.gz` — native libraries → `app/src/main/jniLibs/arm64-v8a`
 - `*-jarOut.tar.gz` — Java libraries → `app/libs/rcljava`
+- `SHA256SUMS.txt` — checksums for both
 
-If you only want the libraries, download these instead of building.
+All builds target NDK r28, ABI `arm64-v8a`, Android API level 24, and include the
+Fast-DDS, Cyclone DDS and Zenoh RMW implementations.
 
-## Environment
-Modify [Dockerfile](./Dockerfile) to change environment.
-- NDK:  android-ndk-r28
-- ABI: arm64-v8a  
-- Android API Level: 24
+## Building
 
-## ROS2 version  
-
-Modify [repo](./ros2_java_android.repos) to change ROS2 version.
-
-Currently ROS2 Humble is selectd for the building.
-
-## How to build
-
-### 1. Clone repository
 ```
 git clone https://github.com/nicholaslu/ros2-android-build
 cd ros2-android-build/
-```
-
-### 2. Build docker image
-```
-docker build -t ros2java-android-build ./
-```
-
-### 3. Build
-```
+git switch lyrical                              # or humble / jazzy
+docker build -t ros2java-android-build:lyrical ./
 python3 run.py ./out/soOut ./out/jarOut
 ```
 
-### 4. Copy files to Android Studio project
-Copy `.jar` files to `app/libs/rcljava` and `.so` files to `app/src/main/jniLibs/arm64-v8a`
-and add `implementation fileTree(include: ['*.jar'], dir: 'libs')` to `dependencies{}` of `app/build.gradle`
+See that branch's README for the full instructions, including how to add your own
+packages to the workspace and how to cut a release.
 
-## How to cut a release
+## Why branches instead of directories
 
-Releases are built by CI from a tag. The tag matches the `ros2/ros2` release
-being built:
-
-```
-release-humble-20260220     # Android build of Humble Patch Release 14
-```
-
-If the same upstream release has to be rebuilt after an Android-side fix, add a
-build number starting at `-2`:
-
-```
-release-humble-20260220-2   # same upstream packages, patched and rebuilt
-```
-
-The `<distro>-<YYYYMMDD>` part must match the `# ros2-release:` pin in
-`ros2_java_android.repos`; CI fails the release if it does not. The release title
-and notes are generated automatically, reusing upstream's own release name.
-
-```
-git tag release-humble-20260220-1
-git push origin release-humble-20260220-1
-```
+The distros do not differ by a flag or two. They need different Ubuntu bases,
+different Python and CMake versions, different upstream package sets, and largely
+disjoint patch sets — ROS 2's ongoing retirement of vendor packages in favour of
+rosdep-supplied system libraries means each distro breaks an Android cross-build in
+its own way. Keeping them on separate branches lets each stay simple and lets a
+distro be fixed, tagged and released without touching the others.
