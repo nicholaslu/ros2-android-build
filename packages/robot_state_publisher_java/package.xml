@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>robot_state_publisher_java</name>
+  <version>0.1.0</version>
+  <description>
+    Java bindings that run the upstream robot_state_publisher node in-process, on its own
+    context and executor, so an Android app can publish robot_description and the link TFs
+    without a separate ROS 2 process.
+  </description>
+
+  <maintainer email="nicholaslu1996@gmail.com">nicholaslu</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_export_jars</buildtool_depend>
+  <buildtool_depend>ament_cmake_export_jni_libraries</buildtool_depend>
+  <buildtool_depend>rcljava_common</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>robot_state_publisher</depend>
+
+  <exec_depend>rcljava_common</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
