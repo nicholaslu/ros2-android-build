@@ -58,6 +58,29 @@ def setupRos2Java(workspacePath: pathlib.Path):
         subprocess.run(command, shell=True, check=True)
 
 
+def setupLocalPackages(workspacePath: pathlib.Path):
+    """Copy the packages/ directory into the workspace source tree.
+
+    These are packages maintained here rather than imported by vcs: they have no upstream to
+    pull from and no upstream file to patch. Copied fresh on every run so edits take effect
+    without a --clean, and kept under src/local/ so vcs import never touches them.
+    """
+    projectPath = pathlib.Path(__file__).resolve().parent
+    packagesPath = projectPath.joinpath("packages")
+    if not packagesPath.is_dir():
+        return
+
+    destRoot = workspacePath.joinpath("src", "local")
+    if destRoot.exists():
+        shutil.rmtree(destRoot)
+
+    for package in sorted(packagesPath.iterdir()):
+        if not package.is_dir():
+            continue
+        print(f"Adding local package: {package.name}")
+        shutil.copytree(package, destRoot.joinpath(package.name))
+
+
 def build(workspacePath: pathlib.Path):
     print('start building packages')
     command = f'{DOCKER_RUN} --rm --net=host -v {workspacePath}:/home/user/workspace {IMAGE} /home/user/build-android.sh'
@@ -136,6 +159,7 @@ def main():
     os.makedirs(jarOutPath, exist_ok=True)
 
     setupRos2Java(workspacePath)
+    setupLocalPackages(workspacePath)
 
     if args.srcDir is not None:
         additionalSrcDirPath = pathlib.Path(args.srcDir).resolve()
