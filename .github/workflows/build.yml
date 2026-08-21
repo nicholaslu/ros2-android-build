@@ -64,7 +64,7 @@ jobs:
             # release, and then has to show up in the asset names too.
             if [ -n "$build" ]; then
               slug="${distro}-${date}-${build}"
-              upstream_name="${upstream_name} (Android build ${build})"
+              upstream_name="${upstream_name} (build ${build})"
             else
               slug="${distro}-${date}"
             fi
