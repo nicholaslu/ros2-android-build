@@ -94,14 +94,14 @@ Releases are built by CI from a tag. The tag matches the `ros2/ros2` release
 being built:
 
 ```
-release-lyrical-20260623    # Android build of Lyrical Patch Release 1
+release-lyrical-20260807    # Android build of Lyrical Patch Release 2
 ```
 
 If the same upstream release has to be rebuilt after an Android-side fix, add a
 build number starting at `-2`:
 
 ```
-release-lyrical-20260623-2  # same upstream packages, patched and rebuilt
+release-lyrical-20260807-2  # same upstream packages, patched and rebuilt
 ```
 
 The `<distro>-<YYYYMMDD>` part must match the `# ros2-release:` pin in
@@ -110,6 +110,6 @@ whose distro you are releasing. The release title
 and notes are generated automatically, reusing upstream's own release name.
 
 ```
-git tag release-lyrical-20260623
-git push origin release-lyrical-20260623
+git tag release-lyrical-20260807
+git push origin release-lyrical-20260807
 ```
