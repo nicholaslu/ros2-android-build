@@ -144,7 +144,7 @@ repositories:
   ros2/libyaml_vendor:
     type: git
     url: https://github.com/ros2/libyaml_vendor.git
-    version: 1.8.0
+    version: 1.8.1
   ros2/message_filters:
     type: git
     url: https://github.com/ros2/message_filters.git
@@ -265,6 +265,16 @@ repositories:
     type: git
     url: https://github.com/ros2/urdf.git
     version: 2.13.2
+  # libyaml itself. From 1.8.1, libyaml_vendor no longer builds it and expects the
+  # system library instead (rosdep key `yaml`, Ubuntu's libyaml-dev). Android has no
+  # system libyaml, so this stands in for it: same upstream version as Ubuntu 26.04's
+  # libyaml-dev 0.2.5-2build3, which carries no Debian source patches. Keep in step
+  # with that package, including its security updates. Its CMake project is named
+  # `yaml`, so colcon resolves rcl's <depend>yaml</depend> to it.
+  yaml/libyaml:
+    type: git
+    url: https://github.com/yaml/libyaml.git
+    version: 0.2.5
   # Cyclone DDS bindings used by zenoh-plugin-ros2dds, imported from the crates.io
   # release (the git repo carries Cyclone as a submodule, which vcs import does not
   # fetch) so patches/cyclors.patch can fix its vendored Cyclone for bionic. Must

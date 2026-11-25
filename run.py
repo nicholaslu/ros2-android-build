@@ -184,7 +184,7 @@ def main():
     # rosdep, but an Android cross-build has no system tinyxml2 / orocos_kdl, so
     # they stay pinned by hand in the repos file and still need their patches.
     patch(workspacePath, ["src", "ros2", "orocos_kdl_vendor"], ["patches", "orocos_kdl_vendor.patch"])
-    patch(workspacePath, ["src", "ros2", "libyaml_vendor"], ["patches", "libyaml_vendor.patch"])
+    patch(workspacePath, ["src", "yaml", "libyaml"], ["patches", "libyaml.patch"])
     patch(workspacePath, ["src", "ros", "pluginlib"], ["patches", "pluginlib.patch"])
     patch(workspacePath, ["src", "ros", "urdfdom"], ["patches", "urdfdom.patch"])
     patch(workspacePath, ["src", "ros", "kdl_parser"], ["patches", "kdl_parser.patch"])
