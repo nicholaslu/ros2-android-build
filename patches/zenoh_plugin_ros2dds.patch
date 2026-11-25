@@ -1,0 +1,209 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 419b639..fc1c15b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -33,18 +33,71 @@ FILE(GLOB RUST_SRC_FILES
+   ${CMAKE_SOURCE_DIR}/zenoh-plugin-ros2dds/src/*.rs
+   ${CMAKE_SOURCE_DIR}/Cargo.lock)
+ 
++if(ANDROID)
++  # Cross-compile with the NDK. The image already provides cargo's linker and the
++  # cc crate's CC_/CXX_/AR_ variables for the target; what is set here covers
++  # cyclors, which builds Cyclone DDS through the cmake crate and runs bindgen, and
++  # one image-wide cargo setting that must not reach this binary.
++  if(ANDROID_ABI STREQUAL "arm64-v8a")
++    set(RUST_TARGET aarch64-linux-android)
++  else()
++    message(FATAL_ERROR "zenoh_bridge_ros2dds: unsupported ANDROID_ABI '${ANDROID_ABI}'")
++  endif()
++  string(REPLACE "-" "_" RUST_TARGET_ENV "${RUST_TARGET}")
++  foreach(_var ANDROID_TOOLCHAIN_ROOT ANDROID_PLATFORM ANDROID_PLATFORM_LEVEL CMAKE_SYSROOT)
++    if(NOT ${_var})
++      message(FATAL_ERROR "zenoh_bridge_ros2dds: ${_var} is not set by the NDK toolchain")
++    endif()
++  endforeach()
++
++  # The cmake crate hands Cyclone the NDK toolchain without ANDROID_ABI or
++  # ANDROID_PLATFORM, so the NDK falls back to armeabi-v7a at API 21. Pin both to
++  # this build's values, then defer to the same NDK toolchain.
++  set(CARGO_CMAKE_TOOLCHAIN "${CMAKE_BINARY_DIR}/cargo-android.toolchain.cmake")
++  file(WRITE "${CARGO_CMAKE_TOOLCHAIN}"
++    "set(ANDROID_ABI ${ANDROID_ABI})\n"
++    "set(ANDROID_PLATFORM ${ANDROID_PLATFORM})\n"
++    "include(\"${CMAKE_TOOLCHAIN_FILE}\")\n")
++
++  # bindgen needs libclang; the NDK ships one. libclang derives its resource dir
++  # (stddef.h, ...) from the host process -- cargo's build script -- rather than
++  # from the NDK clang, so pass it explicitly with the sysroot and API level.
++  execute_process(
++    COMMAND "${ANDROID_TOOLCHAIN_ROOT}/bin/clang" -print-resource-dir
++    OUTPUT_VARIABLE NDK_CLANG_RESOURCE_DIR
++    OUTPUT_STRIP_TRAILING_WHITESPACE
++    COMMAND_ERROR_IS_FATAL ANY)
++
++  set(CARGO_ENV
++    "LIBCLANG_PATH=${ANDROID_TOOLCHAIN_ROOT}/lib"
++    "BINDGEN_EXTRA_CLANG_ARGS_${RUST_TARGET_ENV}=--target=${RUST_TARGET}${ANDROID_PLATFORM_LEVEL} --sysroot=${CMAKE_SYSROOT} -resource-dir=${NDK_CLANG_RESOURCE_DIR}"
++    "CMAKE_TOOLCHAIN_FILE_${RUST_TARGET_ENV}=${CARGO_CMAKE_TOOLCHAIN}"
++    # The image's cargo config forces -soname,libzenohc.so onto every artifact
++    # for this target, which zenoh-c needs. An empty RUSTFLAGS takes precedence.
++    "RUSTFLAGS=")
++  set(CARGO_TARGET_ARGS --target ${RUST_TARGET})
++  set(RUST_BINARY "${RUST_TARGET_DIR}/${RUST_TARGET}/release/zenoh-bridge-ros2dds")
++else()
++  set(CARGO_ENV "")
++  set(CARGO_TARGET_ARGS "")
++  set(RUST_BINARY "${RUST_TARGET_DIR}/release/zenoh-bridge-ros2dds")
++endif()
++
++# --locked: build exactly the dependency versions in Cargo.lock.
+ add_custom_command(
+   OUTPUT
+-  ${RUST_TARGET_DIR}/release/zenoh-bridge-ros2dds
+-  COMMAND cargo build --release --manifest-path "${CMAKE_SOURCE_DIR}/zenoh-bridge-ros2dds/Cargo.toml" --target-dir "${RUST_TARGET_DIR}"
++  ${RUST_BINARY}
++  COMMAND ${CMAKE_COMMAND} -E env ${CARGO_ENV}
++    cargo build --release --locked ${CARGO_TARGET_ARGS} --manifest-path "${CMAKE_SOURCE_DIR}/zenoh-bridge-ros2dds/Cargo.toml" --target-dir "${RUST_TARGET_DIR}"
+   DEPENDS
+   ${RUST_SRC_FILES}
++  VERBATIM
+ )
+ 
+ add_custom_target(
+   build_crate ALL
+   DEPENDS
+-  ${RUST_TARGET_DIR}/release/zenoh-bridge-ros2dds
++  ${RUST_BINARY}
+ )
+ 
+ macro(INSTALL_ZENOH src_path dst_path)
+@@ -56,8 +109,20 @@ macro(INSTALL_ZENOH src_path dst_path)
+   )
+ endmacro(INSTALL_ZENOH)
+ 
+-INSTALL_ZENOH(${RUST_TARGET_DIR}/release/zenoh-bridge-ros2dds lib/${PROJECT_NAME})
++INSTALL_ZENOH(${RUST_BINARY} lib/${PROJECT_NAME})
+ 
+-INSTALL_ZENOH(${RUST_TARGET_DIR}/release/zenoh-bridge-ros2dds bin)
++INSTALL_ZENOH(${RUST_BINARY} bin)
++
++if(ANDROID)
++  # An Android app may only exec binaries from its nativeLibraryDir, and the
++  # installer only extracts files named lib*.so there. Install it under that name
++  # too, so it can ship in jniLibs like a library.
++  install(FILES
++    ${RUST_BINARY}
++    RENAME libzenoh_bridge_ros2dds.so
++    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
++    DESTINATION lib
++  )
++endif()
+ 
+ ament_package()
+diff --git a/Cargo.lock b/Cargo.lock
+index c44c8da..46ad63f 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -693,8 +693,6 @@ dependencies = [
+ [[package]]
+ name = "cyclors"
+ version = "0.4.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "6beb8dc0574f6e2184a2a67c6833ff7ab5b64a95d2459db9b009797b0bb7374e"
+ dependencies = [
+  "bincode",
+  "bindgen",
+diff --git a/Cargo.toml b/Cargo.toml
+index 968a8c3..37ba862 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -63,3 +63,9 @@ debug = false
+ lto = "fat"
+ opt-level = 3
+ panic = "abort"
++
++# Android: build against a locally patched cyclors (see patches/cyclors.patch in
++# ros2-android-build). Its vendored Cyclone DDS calls pthread_attr_setinheritsched,
++# which bionic only declares from API 28. Same crate version as crates.io.
++[patch.crates-io]
++cyclors = { path = "../../ZettaScaleLabs/cyclors" }
+diff --git a/zenoh-plugin-ros2dds/src/dds_utils.rs b/zenoh-plugin-ros2dds/src/dds_utils.rs
+index 10d3f7e..558260a 100644
+--- a/zenoh-plugin-ros2dds/src/dds_utils.rs
++++ b/zenoh-plugin-ros2dds/src/dds_utils.rs
+@@ -50,7 +50,17 @@ pub fn is_cdr_little_endian(cdr_buffer: &[u8]) -> Option<bool> {
+     }
+ }
+ 
+-pub fn ddsrt_iov_len_to_usize(len: ddsrt_iov_len_t) -> Result<usize, String> {
++// Generic over the length type because ddsrt_iovec_t::iov_len is not always a
++// ddsrt_iov_len_t. On POSIX, Cyclone aliases ddsrt_iovec_t to the system's
++// struct iovec: glibc declares its iov_len as size_t (usize), but bionic takes
++// struct iovec from the kernel UAPI headers, where iov_len is __kernel_size_t
++// (c_ulong) -- the same width as usize on arm64, but a distinct Rust type.
++// Converting to/from the field's own type covers Windows (u32) too.
++pub fn ddsrt_iov_len_to_usize<T>(len: T) -> Result<usize, String>
++where
++    T: TryInto<usize>,
++    T::Error: std::fmt::Display,
++{
+     // Depending the platform ddsrt_iov_len_t can have different typedef
+     // See https://github.com/eclipse-cyclonedds/cyclonedds/blob/master/src/ddsrt/include/dds/ddsrt/iovec.h
+     // Thus this conversion is NOT useless on Windows where ddsrt_iov_len_t is a u32 !
+@@ -59,7 +69,11 @@ pub fn ddsrt_iov_len_to_usize(len: ddsrt_iov_len_t) -> Result<usize, String> {
+         .map_err(|e| format!("INTERNAL ERROR converting a ddsrt_iov_len_t to usize: {e}"))
+ }
+ 
+-pub fn ddsrt_iov_len_from_usize(len: usize) -> Result<ddsrt_iov_len_t, String> {
++pub fn ddsrt_iov_len_from_usize<T>(len: usize) -> Result<T, String>
++where
++    T: TryFrom<usize>,
++    T::Error: std::fmt::Display,
++{
+     // Depending the platform ddsrt_iov_len_t can have different typedef
+     // See https://github.com/eclipse-cyclonedds/cyclonedds/blob/master/src/ddsrt/include/dds/ddsrt/iovec.h
+     // Thus this conversion is NOT useless on Windows where ddsrt_iov_len_t is a u32 !
+@@ -197,7 +211,7 @@ pub fn dds_write(data_writer: dds_entity_t, data: Vec<u8>) -> Result<(), String>
+         // that is not necessarily safe or guaranteed to be leak free.
+         // TODO replace when stable https://github.com/rust-lang/rust/issues/65816
+         let (ptr, len, capacity) = vec_into_raw_parts(data);
+-        let size: ddsrt_iov_len_t = ddsrt_iov_len_from_usize(len)?;
++        let size = ddsrt_iov_len_from_usize(len)?;
+ 
+         let data_out = ddsrt_iovec_t {
+             iov_base: ptr as *mut std::ffi::c_void,
+diff --git a/zenoh-plugin-ros2dds/src/ros_discovery.rs b/zenoh-plugin-ros2dds/src/ros_discovery.rs
+index eb7f5aa..678d67c 100644
+--- a/zenoh-plugin-ros2dds/src/ros_discovery.rs
++++ b/zenoh-plugin-ros2dds/src/ros_discovery.rs
+@@ -353,7 +353,7 @@ impl RosDiscoveryInfoMgr {
+             // that is not necessarily safe or guaranteed to be leak free.
+             // TODO replace when stable https://github.com/rust-lang/rust/issues/65816
+             let (ptr, len, capacity) = crate::vec_into_raw_parts(buf);
+-            let size: ddsrt_iov_len_t = ddsrt_iov_len_from_usize(len)?;
++            let size = ddsrt_iov_len_from_usize(len)?;
+ 
+             let data_out = ddsrt_iovec_t {
+                 iov_base: ptr as *mut std::ffi::c_void,
+diff --git a/zenoh-plugin-ros2dds/src/route_subscriber.rs b/zenoh-plugin-ros2dds/src/route_subscriber.rs
+index d5e824b..f88f098 100644
+--- a/zenoh-plugin-ros2dds/src/route_subscriber.rs
++++ b/zenoh-plugin-ros2dds/src/route_subscriber.rs
+@@ -16,7 +16,7 @@ use std::{collections::HashSet, ffi::CStr, fmt, time::Duration};
+ 
+ use cyclors::{
+     dds_entity_t, dds_get_entity_sertype, dds_strretcode, dds_writecdr, ddsi_serdata_from_ser_iov,
+-    ddsi_serdata_kind_SDK_DATA, ddsi_sertype, ddsrt_iov_len_t, ddsrt_iovec_t,
++    ddsi_serdata_kind_SDK_DATA, ddsi_sertype, ddsrt_iovec_t,
+ };
+ use serde::Serialize;
+ use zenoh::{
+@@ -339,7 +339,7 @@ fn route_zenoh_message_to_dds(s: Sample, ros2_name: &str, data_writer: dds_entit
+         // that is not necessarily safe or guaranteed to be leak free.
+         // TODO replace when stable https://github.com/rust-lang/rust/issues/65816
+         let (ptr, len, capacity) = vec_into_raw_parts(bs);
+-        let size: ddsrt_iov_len_t = match ddsrt_iov_len_from_usize(len) {
++        let size = match ddsrt_iov_len_from_usize(len) {
+             Ok(s) => s,
+             Err(_) => {
+                 tracing::warn!(
