@@ -46,6 +46,13 @@ repositories:
     type: git
     url: https://github.com/eclipse-cyclonedds/cyclonedds.git
     version: 0.10.5
+  # Standalone zenoh <-> ROS 2 DDS bridge, cross-compiled from Rust. Not
+  # tied to a ROS distro and not in ros2/ros2's manifest, so pinned here.
+  # Builds against the patched cyclors below (patches/zenoh_plugin_ros2dds.patch).
+  eclipse-zenoh/zenoh-plugin-ros2dds:
+    type: git
+    url: https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds.git
+    version: 1.10.2
   osrf/osrf_pycommon:
     type: git
     url: https://github.com/osrf/osrf_pycommon.git
@@ -258,3 +265,11 @@ repositories:
     type: git
     url: https://github.com/ros2/urdf.git
     version: 2.10.1
+  # Cyclone DDS bindings used by zenoh-plugin-ros2dds, imported from the crates.io
+  # release (the git repo carries Cyclone as a submodule, which vcs import does not
+  # fetch) so patches/cyclors.patch can fix its vendored Cyclone for bionic. Must
+  # match the cyclors version in zenoh-plugin-ros2dds's Cargo.lock.
+  ZettaScaleLabs/cyclors:
+    type: tar
+    url: https://static.crates.io/crates/cyclors/cyclors-0.4.0.crate
+    version: cyclors-0.4.0
