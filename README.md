@@ -42,12 +42,3 @@ python3 run.py ./out/soOut ./out/jarOut
 
 See that branch's README for the full instructions, including how to add your own
 packages to the workspace and how to cut a release.
-
-## Why branches instead of directories
-
-The distros do not differ by a flag or two. They need different Ubuntu bases,
-different Python and CMake versions, different upstream package sets, and largely
-disjoint patch sets — ROS 2's ongoing retirement of vendor packages in favour of
-rosdep-supplied system libraries means each distro breaks an Android cross-build in
-its own way. Keeping them on separate branches lets each stay simple and lets a
-distro be fixed, tagged and released without touching the others.
