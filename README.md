@@ -94,14 +94,14 @@ Releases are built by CI from a tag. The tag matches the `ros2/ros2` release
 being built:
 
 ```
-release-humble-20260220     # Android build of Humble Patch Release 14
+release-humble-20260914     # Android build of Humble Patch Release 15
 ```
 
 If the same upstream release has to be rebuilt after an Android-side fix, add a
 build number starting at `-2`:
 
 ```
-release-humble-20260220-2   # same upstream packages, patched and rebuilt
+release-humble-20260914-2   # same upstream packages, patched and rebuilt
 ```
 
 The `<distro>-<YYYYMMDD>` part must match the `# ros2-release:` pin in
@@ -110,6 +110,6 @@ whose distro you are releasing. The release title
 and notes are generated automatically, reusing upstream's own release name.
 
 ```
-git tag release-humble-20260220-1
-git push origin release-humble-20260220-1
+git tag release-humble-20260914
+git push origin release-humble-20260914
 ```

@@ -5,7 +5,7 @@ on:
     branches: [humble]
     # Release tags mirror ros2/ros2's scheme, with a trailing build number for
     # Android-side respins of the same upstream release:
-    #   release-humble-20260220-1
+    #   release-humble-20260914-2
     tags: ['release-*']
   pull_request:
   workflow_dispatch:
@@ -53,7 +53,7 @@ jobs:
               exit 1
             fi
 
-            # Reuse upstream's own release title ("... Patch Release 14") rather
+            # Reuse upstream's own release title ("... Patch Release 15") rather
             # than trying to derive the patch number from the date.
             upstream_name=$(gh api "repos/ros2/ros2/releases/tags/${upstream}" --jq .name 2>/dev/null || true)
             [ -n "$upstream_name" ] || upstream_name="$upstream"
