@@ -9,9 +9,9 @@ and CI workflow. Pick the branch for the distro you want.
 
 | Branch | Distro | Upstream pin | Base image | Upstream EOL |
 |---|---|---|---|---|
-| [`humble`](../../tree/humble)   | Humble Hawksbill | `release-humble-20260220`  | Ubuntu 22.04 | May 2027 |
+| [`humble`](../../tree/humble)   | Humble Hawksbill | `release-humble-20260914`  | Ubuntu 22.04 | May 2027 |
 | [`jazzy`](../../tree/jazzy)     | Jazzy Jalisco    | `release-jazzy-20260618`   | Ubuntu 24.04 | May 2029 |
-| [`lyrical`](../../tree/lyrical) | Lyrical Luth     | `release-lyrical-20260623` | Ubuntu 26.04 | May 2031 |
+| [`lyrical`](../../tree/lyrical) | Lyrical Luth     | `release-lyrical-20260807` | Ubuntu 26.04 | May 2031 |
 
 Each branch's pin is recorded in the `# ros2-release:` line at the top of its
 `ros2_java_android.repos` and matches an official
@@ -28,7 +28,9 @@ tagged `release-<distro>-<YYYYMMDD>` and carries:
 - `SHA256SUMS.txt` — checksums for both
 
 All builds target NDK r28, ABI `arm64-v8a`, Android API level 24, and include the
-Fast-DDS, Cyclone DDS and Zenoh RMW implementations.
+Fast-DDS, Cyclone DDS and Zenoh RMW implementations, plus the
+[zenoh-bridge-ros2dds](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
+executable — see a branch README for how to run it on Android.
 
 ## Building
 
