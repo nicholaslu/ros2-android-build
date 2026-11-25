@@ -121,17 +121,27 @@ def patch(workspacePath: pathlib.Path, repoPath: pathlib.Path, patchPath: pathli
     print(f"Applying patch: {patchPath}")
 
     # skip if the patch is already applied
+    # Stop git's repository discovery at repoPath. A source imported from a tarball
+    # has no .git of its own, so git would otherwise find this project's repository
+    # above it and resolve the patch's paths against that top level -- then silently
+    # drop them all as "outside the current directory". Both the check and the apply
+    # would succeed while changing nothing, and this function would report the patch
+    # as already applied. Git clones still find their own .git first.
+    git_env = dict(os.environ, GIT_CEILING_DIRECTORIES=str(repoPath.parent))
+
     reverse_check = subprocess.run(
         ["git", "-C", str(repoPath), "apply", "--reverse", "--check", str(patchPath)],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        env=git_env,
     )
     if reverse_check.returncode == 0:
         print("Patch already applied, skipping.")
         return
 
     apply_result = subprocess.run(
-        ["git", "-C", str(repoPath), "apply", str(patchPath)]
+        ["git", "-C", str(repoPath), "apply", str(patchPath)],
+        env=git_env,
     )
     if apply_result.returncode != 0:
         raise RuntimeError(f"Failed to apply patch: {patchPath}")
@@ -189,6 +199,8 @@ def main():
     patch(workspacePath, ["src", "ros2", "rmw_zenoh"], ["patches", "rmw_zenoh.patch"])
     patch(workspacePath, ["src", "eclipse-cyclonedds", "cyclonedds"], ["patches", "cyclonedds.patch"])
     patch(workspacePath, ["src", "eProsima", "Fast-DDS"], ["patches", "fastdds.patch"])
+    patch(workspacePath, ["src", "ZettaScaleLabs", "cyclors"], ["patches", "cyclors.patch"])
+    patch(workspacePath, ["src", "eclipse-zenoh", "zenoh-plugin-ros2dds"], ["patches", "zenoh_plugin_ros2dds.patch"])
     build(workspacePath)
     output(workspacePath, soOutPath, jarOutPath)
 

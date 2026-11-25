@@ -1,0 +1,19 @@
+diff --git a/COLCON_IGNORE b/COLCON_IGNORE
+new file mode 100644
+index 0000000..e69de29
+diff --git a/cyclonedds/src/ddsrt/src/threads/posix/threads.c b/cyclonedds/src/ddsrt/src/threads/posix/threads.c
+index 0648a32..b71c0da 100644
+--- a/cyclonedds/src/ddsrt/src/threads/posix/threads.c
++++ b/cyclonedds/src/ddsrt/src/threads/posix/threads.c
+@@ -406,7 +406,10 @@ ddsrt_thread_create (
+       goto err;
+     }
+ 
+-#if !defined(__ZEPHYR__)
++#if !defined(__ZEPHYR__) && !defined(__ANDROID__)
++    /* Bionic only declares pthread_attr_setinheritsched from API 28, and this build
++       targets API 24. Bionic applies scheduling attributes set on the pthread_attr_t
++       explicitly anyway. Same fix as patches/cyclonedds.patch. */
+     if ((result = pthread_attr_setinheritsched (&pattr, PTHREAD_EXPLICIT_SCHED)) != 0)
+     {
+       DDS_ERROR("ddsrt_thread_create(%s): pthread_attr_setinheritsched(EXPLICIT) failed with error %d\n", name, result);

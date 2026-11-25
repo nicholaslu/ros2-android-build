@@ -66,6 +66,38 @@ if you need the old copying behaviour.
 `string[]` and arrays of messages are unaffected — they remain `List<String>` and
 `List<MessageType>`, since their per-element JNI cost is inherent.
 
+## zenoh-bridge-ros2dds
+
+Releases include [zenoh-bridge-ros2dds](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds)
+1.10.2, which bridges ROS 2 DDS traffic to [Zenoh](https://zenoh.io). It is a standalone
+executable rather than a library, but it ships in `soOut` as `libzenoh_bridge_ros2dds.so`:
+since Android 10 an app may only execute binaries from its `nativeLibraryDir`, and the
+installer only extracts files named `lib*.so` there.
+
+It needs only Android system libraries (Cyclone DDS is linked in statically), so it
+can be dropped into `jniLibs/arm64-v8a` on its own. The APK must extract native
+libraries to disk for the file to be executable:
+
+```groovy
+android {
+    packaging { jniLibs { useLegacyPackaging = true } }
+}
+```
+
+Then start it as a child process:
+
+```kotlin
+val bridge = File(applicationInfo.nativeLibraryDir, "libzenoh_bridge_ros2dds.so")
+val process = ProcessBuilder(bridge.path, "-e", "tcp/192.168.1.10:7447")
+    .redirectErrorStream(true)
+    .start()
+```
+
+The bridge talks DDS to local nodes, so those nodes must use a DDS RMW
+(`rmw_cyclonedds_cpp` is what upstream tests against), not `rmw_zenoh_cpp`. On the
+Zenoh side it speaks to other zenoh-bridge-ros2dds instances or a `zenohd` router;
+it is not a drop-in peer for `rmw_zenoh` nodes, which use a different key format.
+
 ## How to build
 
 ### 1. Clone repository
