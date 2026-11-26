@@ -90,8 +90,16 @@ Then start it as a child process:
 val bridge = File(applicationInfo.nativeLibraryDir, "libzenoh_bridge_ros2dds.so")
 val process = ProcessBuilder(bridge.path, "-e", "tcp/192.168.1.10:7447")
     .redirectErrorStream(true)
+    .apply { environment()["ROS_DISTRO"] = "humble" }
     .start()
 ```
+
+Set `ROS_DISTRO` to `humble`. The binary is the same for every distro and picks its
+ROS 2 conventions from this variable at startup (before Iron: no type hash in the QoS
+user data, legacy discovery). When it is unset, the bridge warns and assumes Iron or
+later. Pass it through `environment()`: `Os.setenv` changes made at runtime don't reach
+child processes, because `ProcessBuilder` copies the JVM's startup environment. The same
+applies to `ROS_DOMAIN_ID`; pass `-d <id>` or set it the same way.
 
 The bridge talks DDS to local nodes, so those nodes must use a DDS RMW
 (`rmw_cyclonedds_cpp` is what upstream tests against), not `rmw_zenoh_cpp`. On the
