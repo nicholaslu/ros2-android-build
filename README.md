@@ -19,10 +19,22 @@ of truth for the pin.
 
 Prebuilt libraries are published under [Releases](../../releases). Each release
 corresponds to one official [ros2/ros2](https://github.com/ros2/ros2/releases)
-patch release, and carries two assets:
+patch release, and carries these assets:
 
 - `*-soOut.tar.gz` — native libraries → `app/src/main/jniLibs/arm64-v8a`
 - `*-jarOut.tar.gz` — Java libraries → `app/libs/rcljava`
+- `*-symbols.tar.gz` — the same native libraries unstripped, for `ndk-stack` / lldb.
+  Not needed to build an app.
+
+The libraries in `soOut` are stripped (`llvm-strip --strip-unneeded`: debug info and
+`.symtab` removed, `.dynsym` kept), except `libc++_shared.so`, which is the NDK's binary
+unmodified. Every library built from source carries `DT_RUNPATH` = `$ORIGIN`, so its
+dependencies also resolve from the folder it was loaded from.
+
+rcljava loads its JNI libraries with `System.loadLibrary`. To load them from a folder
+outside the app's native library directory instead, set the system property
+`org.ros2.rcljava.library_dir` to that folder before the first ROS class loads; rcljava
+then calls `System.load("<dir>/lib<name>.so")`. Unset or empty, nothing changes.
 
 If you only want the libraries, download these instead of building.
 
@@ -123,6 +135,8 @@ docker build -t ros2java-android-build:humble ./
 ```
 python3 run.py ./out/soOut ./out/jarOut
 ```
+`soOut` gets stripped libraries. Add `--symbolsOutDir ./out/symbols` to also keep
+unstripped copies.
 
 ### 4. Copy files to Android Studio project
 Copy `.jar` files to `app/libs/rcljava` and `.so` files to `app/src/main/jniLibs/arm64-v8a`

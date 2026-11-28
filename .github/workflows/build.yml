@@ -105,7 +105,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build workspace
-        run: python3 run.py out/soOut out/jarOut
+        run: python3 run.py out/soOut out/jarOut --symbolsOutDir out/symbols
 
       - name: Package outputs
         env:
@@ -114,6 +114,7 @@ jobs:
           set -euo pipefail
           tar -C out -czf "ros2-android-${SLUG}-soOut.tar.gz" soOut
           tar -C out -czf "ros2-android-${SLUG}-jarOut.tar.gz" jarOut
+          tar -C out -czf "ros2-android-${SLUG}-symbols.tar.gz" symbols
           sha256sum ros2-android-*.tar.gz | tee SHA256SUMS.txt
 
       - name: Upload artifacts
@@ -156,6 +157,24 @@ jobs:
 
           - \`*-soOut.tar.gz\` — native libraries → \`app/src/main/jniLibs/${ABI}\`
           - \`*-jarOut.tar.gz\` — Java libraries → \`app/libs/rcljava\`
+          - \`*-symbols.tar.gz\` — the same libraries unstripped, for \`ndk-stack\` / lldb
+            when debugging a native crash. Not needed to build an app.
+
+          ## Native libraries
+
+          - Stripped with \`llvm-strip --strip-unneeded\` (debug info and \`.symtab\` removed,
+            \`.dynsym\` kept). \`libc++_shared.so\` is the NDK's own binary, unmodified.
+          - Every library built from source has \`DT_RUNPATH\` = \`\$ORIGIN\`, so its
+            dependencies also resolve from the folder it is loaded from.
+          - All \`LOAD\` segments are 16 KB aligned.
+
+          ## Loading JNI libraries from a folder
+
+          rcljava normally loads its JNI libraries with \`System.loadLibrary\`. Setting the
+          system property \`org.ros2.rcljava.library_dir\` to a folder makes it call
+          \`System.load("<dir>/lib<name>.so")\` instead, for libraries kept outside the
+          app's native library directory. Set it before the first ROS class loads. Unset or
+          empty, behaviour is unchanged.
 
           Verify downloads against \`SHA256SUMS.txt\`.
           EOF
