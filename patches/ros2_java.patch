@@ -145,10 +145,10 @@ index 6d60c22..c10aa7e 100644
              }
              futureResult.set(parameterTypes);
 diff --git a/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java b/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java
-index 58661a7..b5e0f11 100644
+index 58661a7..1800510 100644
 --- a/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java
 +++ b/rcljava_common/src/main/java/org/ros2/rcljava/common/JNIUtils.java
-@@ -23,6 +23,19 @@ public final class JNIUtils {
+@@ -23,11 +23,41 @@ public final class JNIUtils {
  
    private static final String TYPESUPPORT = "rosidl_typesupport_c";
  
@@ -158,25 +158,57 @@ index 58661a7..b5e0f11 100644
 +  // ELF dependencies of other JNI libraries or dlopen()ed by the rosidl_typesupport_c
 +  // dispatcher, neither of which triggers JNI_OnLoad, so the JVM/ART may bind a native
 +  // method to a copy whose globals are still null (crashing with "GetFieldID received
-+  // NULL jclass"). Loading them explicitly via System.loadLibrary makes JNI_OnLoad run
++  // NULL jclass"). Loading them explicitly via loadLibrary makes JNI_OnLoad run
 +  // for every copy, so any binding is safe.
 +  private static final String[] TYPESUPPORT_IMPLEMENTATIONS = {
 +    "rosidl_typesupport_fastrtps_c",
 +    "rosidl_typesupport_introspection_c",
 +  };
 +
++  // When set to a non-empty directory, JNI libraries are loaded from
++  // <dir>/lib<name>.so with System.load instead of System.loadLibrary, for apps that keep
++  // the native libraries outside the class loader's native library path (for example,
++  // several ROS distros unpacked to app storage). Read on every load, so it can be set any
++  // time before the first ROS class loads. Unset or empty: System.loadLibrary as upstream.
++  public static final String LIBRARY_DIR_PROPERTY = "org.ros2.rcljava.library_dir";
++
    /**
     * Private constructor so this cannot be instantiated.
     */
-@@ -52,5 +65,14 @@ public final class JNIUtils {
+   private JNIUtils() {}
+ 
++  private static void loadLibrary(String libraryName) {
++    String libraryDir = System.getProperty(LIBRARY_DIR_PROPERTY);
++    if (libraryDir == null || libraryDir.isEmpty()) {
++      System.loadLibrary(libraryName);
++    } else {
++      // A missing file throws UnsatisfiedLinkError, as System.loadLibrary does.
++      System.load(libraryDir + "/lib" + libraryName + ".so");
++    }
++  }
++
+   private static String normalizeClassName(Class cls) {
+     String className = cls.getCanonicalName();
+ 
+@@ -44,13 +74,22 @@ public final class JNIUtils {
+     String libraryName = normalizeClassName(cls);
+     libraryName = libraryName + "__jni";
+     logger.info("Loading implementation: " + libraryName);
+-    System.loadLibrary(libraryName);
++    loadLibrary(libraryName);
+   }
+ 
+   public static void loadTypesupport(Class cls) {
+     String libraryName = normalizeClassName(cls);
      libraryName = libraryName + "__jni__" + JNIUtils.TYPESUPPORT;
      logger.info("Loading typesupport: " + libraryName);
-     System.loadLibrary(libraryName);
+-    System.loadLibrary(libraryName);
++    loadLibrary(libraryName);
 +    for (String implementation : TYPESUPPORT_IMPLEMENTATIONS) {
 +      String implementationLibraryName =
 +          normalizeClassName(cls) + "__jni__" + implementation;
 +      try {
-+        System.loadLibrary(implementationLibraryName);
++        loadLibrary(implementationLibraryName);
 +      } catch (UnsatisfiedLinkError e) {
 +        logger.info("Typesupport implementation not available: " + implementationLibraryName);
 +      }
