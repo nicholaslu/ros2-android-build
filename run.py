@@ -7,6 +7,7 @@ import urllib.request
 import shutil
 import subprocess
 import glob
+import shlex
 
 # --srcDir
 #    package src directory in addition to rcljava related packages.
@@ -16,6 +17,7 @@ import glob
 
 # --soOutDir
 # --jarOutDir
+# --symbolsOutDir
 # --clean
 
 
@@ -24,6 +26,7 @@ def getArgs():
 
     parser.add_argument("soOutDir", help="output directory path of .so files", type=str)
     parser.add_argument("jarOutDir", help="output directory path of .jar files", type=str)
+    parser.add_argument("--symbolsOutDir", help="output directory for unstripped copies of the .so files (soOutDir gets stripped ones)", type=str)
     parser.add_argument("--clean", help="clean build", action='store_true')
 
     additionalPackagesGroup = parser.add_mutually_exclusive_group()
@@ -86,7 +89,7 @@ def build(workspacePath: pathlib.Path):
     command = f'{DOCKER_RUN} --rm --net=host -v {workspacePath}:/home/user/workspace {IMAGE} /home/user/build-android.sh'
     subprocess.run(command, shell=True, check=True)
 
-def output(workspacePath: pathlib.Path, soOutPath: pathlib.Path, jarOutPath: pathlib.Path):
+def output(workspacePath: pathlib.Path, soOutPath: pathlib.Path, jarOutPath: pathlib.Path, symbolsOutPath: "pathlib.Path | None"):
     soFiles = [f for f in glob.glob(str(workspacePath) + "/install/**/*.so", recursive=True)]
     jarFiles = [f for f in glob.glob(str(workspacePath) + "/install/**/*.jar", recursive=True)]
 
@@ -94,16 +97,36 @@ def output(workspacePath: pathlib.Path, soOutPath: pathlib.Path, jarOutPath: pat
         filepath = pathlib.Path(file)
         distFilePath = soOutPath.joinpath(filepath.name)
         shutil.copyfile(file, distFilePath)
+        if symbolsOutPath is not None:
+            shutil.copyfile(file, symbolsOutPath.joinpath(filepath.name))
+
+    strip(soOutPath, [pathlib.Path(f).name for f in soFiles])
     
     for file in jarFiles:
         filepath = pathlib.Path(file)
         distFilePath = jarOutPath.joinpath(filepath.name)
         shutil.copyfile(file, distFilePath)
 
-    # copy stdlib
+    # copy stdlib -- after strip(), and never stripped: apps pair the ROS libraries with
+    # this exact stock NDK binary.
     filepath = workspacePath.joinpath("libc++_shared.so")
     distFilePath = soOutPath.joinpath(filepath.name)
     shutil.copyfile(filepath, distFilePath)
+
+def strip(soOutPath: pathlib.Path, names: "list[str]"):
+    """Strip debug info and .symtab from the given libraries in soOutPath, in place.
+
+    --strip-unneeded keeps .dynsym, which linking and crash reports' function names need.
+    Uses the NDK's llvm-strip from the image. Runs as the calling user, so the rewritten
+    files keep their owner.
+    """
+    if not names:
+        return
+    print('stripping libraries')
+    files = ' '.join(f'/out/{shlex.quote(n)}' for n in sorted(set(names)))
+    command = (f'{DOCKER_RUN} --rm -u {os.getuid()}:{os.getgid()} -v {soOutPath}:/out {IMAGE} '
+               f'bash -c \'"$ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip" --strip-unneeded "$@"\' strip {files}')
+    subprocess.run(command, shell=True, check=True)
 
 def patch(workspacePath: pathlib.Path, repoPath: pathlib.Path, patchPath: pathlib.Path):
     projectPath = pathlib.Path(__file__).resolve().parent
@@ -156,6 +179,7 @@ def main():
     workspaceAdditionalSrcDirPath = pathlib.Path(workspacePath, "additional-src")
     soOutPath = pathlib.Path(args.soOutDir).resolve()
     jarOutPath = pathlib.Path(args.jarOutDir).resolve()
+    symbolsOutPath = pathlib.Path(args.symbolsOutDir).resolve() if args.symbolsOutDir else None
 
     if workspaceAdditionalSrcDirPath.exists():
         shutil.rmtree(workspaceAdditionalSrcDirPath)
@@ -167,6 +191,8 @@ def main():
     os.makedirs(workspacePath, exist_ok=True)
     os.makedirs(soOutPath, exist_ok=True)
     os.makedirs(jarOutPath, exist_ok=True)
+    if symbolsOutPath is not None:
+        os.makedirs(symbolsOutPath, exist_ok=True)
 
     setupRos2Java(workspacePath)
     setupLocalPackages(workspacePath)
@@ -202,7 +228,7 @@ def main():
     patch(workspacePath, ["src", "ZettaScaleLabs", "cyclors"], ["patches", "cyclors.patch"])
     patch(workspacePath, ["src", "eclipse-zenoh", "zenoh-plugin-ros2dds"], ["patches", "zenoh_plugin_ros2dds.patch"])
     build(workspacePath)
-    output(workspacePath, soOutPath, jarOutPath)
+    output(workspacePath, soOutPath, jarOutPath, symbolsOutPath)
 
 
 if __name__ == '__main__':
